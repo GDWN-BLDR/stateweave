@@ -49,7 +49,5 @@ breakdown/
 research/
 content/
 
-# Separate repos / not for public GitHub
-website/
-vscode-extension/
-sdk/
+website/.vite/
+website/.vite/
