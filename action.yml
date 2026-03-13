@@ -1,0 +1,79 @@
+name: 'StateWeave Validate'
+description: 'Validate StateWeave payloads, run diffs on PRs, and check agent state integrity'
+branding:
+  icon: 'check-circle'
+  color: 'purple'
+
+inputs:
+  validate:
+    description: 'Validate all .stateweave.json files in the repo'
+    required: false
+    default: 'true'
+  diff-on-pr:
+    description: 'Generate state diffs for changed payload files in PRs'
+    required: false
+    default: 'false'
+  payload-pattern:
+    description: 'Glob pattern for StateWeave payload files'
+    required: false
+    default: '**/*.stateweave.json'
+  python-version:
+    description: 'Python version to use'
+    required: false
+    default: '3.11'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install StateWeave
+      shell: bash
+      run: pip install stateweave
+
+    - name: Validate payloads
+      if: inputs.validate == 'true'
+      shell: bash
+      run: |
+        echo "🧶 StateWeave Validation"
+        echo "========================"
+        found=0
+        failed=0
+        for f in $(find . -name "*.stateweave.json" -not -path "./.git/*"); do
+          found=$((found + 1))
+          if stateweave validate "$f" > /dev/null 2>&1; then
+            echo "  ✓ $f"
+          else
+            echo "  ✗ $f"
+            failed=$((failed + 1))
+          fi
+        done
+        if [ $found -eq 0 ]; then
+          echo "  No StateWeave payload files found"
+        elif [ $failed -gt 0 ]; then
+          echo ""
+          echo "✗ $failed/$found payloads failed validation"
+          exit 1
+        else
+          echo ""
+          echo "✓ All $found payloads valid"
+        fi
+
+    - name: Diff changed payloads
+      if: inputs.diff-on-pr == 'true' && github.event_name == 'pull_request'
+      shell: bash
+      run: |
+        echo "🧶 StateWeave Diff Report"
+        echo "========================="
+        git diff --name-only origin/${{ github.base_ref }}...HEAD -- '*.stateweave.json' | while read f; do
+          if [ -f "$f" ]; then
+            echo "Changed: $f"
+            # Get the base version
+            git show origin/${{ github.base_ref }}:"$f" > /tmp/sw_base.json 2>/dev/null || continue
+            stateweave diff /tmp/sw_base.json "$f" || true
+            echo "---"
+          fi
+        done

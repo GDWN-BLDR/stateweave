@@ -83,7 +83,9 @@ class EnvironmentScan:
         if self.frameworks:
             for fw in sorted(self.frameworks, key=lambda f: f.name):
                 status = "✓" if fw.has_adapter else "✗"
-                lines.append(f"  {status} {fw.name:<20} v{fw.version:<12} (adapter: {fw.adapter_name})")
+                lines.append(
+                    f"  {status} {fw.name:<20} v{fw.version:<12} (adapter: {fw.adapter_name})"
+                )
         else:
             lines.append("  No agent frameworks detected.")
         lines.append("─" * 50)
@@ -156,8 +158,16 @@ def auto_select_adapter(scan: Optional[EnvironmentScan] = None):
 
     # Priority order for auto-selection
     priority = [
-        "langgraph", "mcp", "crewai", "autogen", "dspy",
-        "llamaindex", "openai_agents", "haystack", "letta", "semantic_kernel",
+        "langgraph",
+        "mcp",
+        "crewai",
+        "autogen",
+        "dspy",
+        "llamaindex",
+        "openai_agents",
+        "haystack",
+        "letta",
+        "semantic_kernel",
     ]
 
     for name in priority:

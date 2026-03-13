@@ -1,13 +1,12 @@
 """Tests for Agent Time Travel — checkpoint, history, rollback, branch, diff."""
 
-import os
 import shutil
 import tempfile
 import unittest
 
 from stateweave.core.timetravel import (
-    CheckpointMetadata,
     CheckpointHistory,
+    CheckpointMetadata,
     CheckpointStore,
 )
 from stateweave.schema.v1 import (
@@ -230,9 +229,13 @@ class TestCheckpointHistory(unittest.TestCase):
     def test_get_version(self):
         h = CheckpointHistory(agent_id="test")
         cp = CheckpointMetadata(
-            version=1, hash="abc", agent_id="test",
-            framework="lg", created_at="now",
-            message_count=0, working_memory_keys=0,
+            version=1,
+            hash="abc",
+            agent_id="test",
+            framework="lg",
+            created_at="now",
+            message_count=0,
+            working_memory_keys=0,
         )
         h.checkpoints.append(cp)
         self.assertEqual(h.get_version(1), cp)
@@ -241,9 +244,13 @@ class TestCheckpointHistory(unittest.TestCase):
     def test_get_by_hash(self):
         h = CheckpointHistory(agent_id="test")
         cp = CheckpointMetadata(
-            version=1, hash="abcdef123456", agent_id="test",
-            framework="lg", created_at="now",
-            message_count=0, working_memory_keys=0,
+            version=1,
+            hash="abcdef123456",
+            agent_id="test",
+            framework="lg",
+            created_at="now",
+            message_count=0,
+            working_memory_keys=0,
         )
         h.checkpoints.append(cp)
         self.assertEqual(h.get_by_hash("abcdef"), cp)

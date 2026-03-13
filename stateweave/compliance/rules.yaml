@@ -173,3 +173,16 @@ dependency_cycles:
   scan_paths:
     - "stateweave/"
   max_depth: 10
+
+# ============================================================
+# LAW 9: ONE Code Quality Standard
+# [BOARD 2026-03-13] No lint or format violations reach production
+# ============================================================
+ruff_quality:
+  enabled: true
+  mode: BLOCK
+  description: "Enforces code style, formatting, and import hygiene via ruff"
+  scan_paths:
+    - "stateweave/"
+    - "tests/"
+    - "scripts/"

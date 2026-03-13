@@ -3,10 +3,10 @@
 import unittest
 
 from stateweave.a2a.bridge import (
-    A2ABridge,
-    A2AAgentCapabilities,
-    STATEWEAVE_MIME_TYPE,
     STATEWEAVE_A2A_SKILL_ID,
+    STATEWEAVE_MIME_TYPE,
+    A2AAgentCapabilities,
+    A2ABridge,
 )
 from stateweave.schema.v1 import (
     AgentMetadata,
@@ -69,9 +69,7 @@ class TestA2ABridge(unittest.TestCase):
         self.assertEqual(meta["message_count"], 5)
 
     def test_transfer_artifact_custom_name(self):
-        artifact = self.bridge.create_transfer_artifact(
-            self.payload, artifact_name="my-state"
-        )
+        artifact = self.bridge.create_transfer_artifact(self.payload, artifact_name="my-state")
         self.assertEqual(artifact["name"], "my-state")
 
     def test_extract_payload_from_parts(self):
@@ -83,9 +81,7 @@ class TestA2ABridge(unittest.TestCase):
         self.assertIsNotNone(extracted)
         self.assertEqual(extracted.source_framework, "langgraph")
         self.assertEqual(extracted.metadata.agent_id, "source-agent")
-        self.assertEqual(
-            len(extracted.cognitive_state.conversation_history), 5
-        )
+        self.assertEqual(len(extracted.cognitive_state.conversation_history), 5)
 
     def test_extract_payload_no_stateweave_part(self):
         parts = [
@@ -101,12 +97,8 @@ class TestA2ABridge(unittest.TestCase):
         extracted = self.bridge.extract_payload(artifact["parts"])
 
         # Verify messages content matches
-        original_msgs = {
-            m.content for m in self.payload.cognitive_state.conversation_history
-        }
-        extracted_msgs = {
-            m.content for m in extracted.cognitive_state.conversation_history
-        }
+        original_msgs = {m.content for m in self.payload.cognitive_state.conversation_history}
+        extracted_msgs = {m.content for m in extracted.cognitive_state.conversation_history}
         self.assertEqual(original_msgs, extracted_msgs)
 
         # Verify working memory matches
@@ -179,9 +171,7 @@ class TestA2AAgentCapabilities(unittest.TestCase):
         self.assertEqual(skill["metadata"]["stateweave.version"], "0.3.0")
 
     def test_get_agent_capabilities(self):
-        caps = A2ABridge.get_agent_capabilities(
-            supported_frameworks=["langgraph", "mcp"]
-        )
+        caps = A2ABridge.get_agent_capabilities(supported_frameworks=["langgraph", "mcp"])
         self.assertIsInstance(caps, A2AAgentCapabilities)
         self.assertEqual(caps.supported_frameworks, ["langgraph", "mcp"])
 

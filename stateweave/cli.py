@@ -252,7 +252,9 @@ def cmd_checkpoint(args):
         sys.exit(1)
 
     payload = serializer.from_dict(payload_dict)
-    store = CheckpointStore(store_dir=args.store_dir if hasattr(args, "store_dir") and args.store_dir else None)
+    store = CheckpointStore(
+        store_dir=args.store_dir if hasattr(args, "store_dir") and args.store_dir else None
+    )
 
     cp = store.checkpoint(
         payload=payload,
@@ -270,7 +272,9 @@ def cmd_history(args):
     """Show checkpoint history for an agent."""
     from stateweave.core.timetravel import CheckpointStore
 
-    store = CheckpointStore(store_dir=args.store_dir if hasattr(args, "store_dir") and args.store_dir else None)
+    store = CheckpointStore(
+        store_dir=args.store_dir if hasattr(args, "store_dir") and args.store_dir else None
+    )
     print(store.format_history(args.agent_id))
 
 
@@ -278,7 +282,9 @@ def cmd_rollback(args):
     """Restore a previous checkpoint."""
     from stateweave.core.timetravel import CheckpointStore
 
-    store = CheckpointStore(store_dir=args.store_dir if hasattr(args, "store_dir") and args.store_dir else None)
+    store = CheckpointStore(
+        store_dir=args.store_dir if hasattr(args, "store_dir") and args.store_dir else None
+    )
     serializer = StateWeaveSerializer(pretty=True)
 
     try:
@@ -295,6 +301,14 @@ def cmd_rollback(args):
         print(f"✓ Restored v{args.version} → {args.output}")
     else:
         print(json.dumps(payload_dict, indent=2, default=str))
+
+
+def cmd_doctor(args):
+    """Run diagnostic health checks."""
+    from stateweave.core.doctor import run_doctor
+
+    report = run_doctor()
+    print(report.format())
 
 
 def main():
@@ -395,6 +409,9 @@ def main():
     rb_parser.add_argument("--output", "-o", help="Output file (default: stdout)")
     rb_parser.add_argument("--store-dir", help="Checkpoint store directory")
 
+    # doctor
+    subparsers.add_parser("doctor", help="Run diagnostic health checks")
+
     args = parser.parse_args()
 
     if args.command == "version":
@@ -423,6 +440,8 @@ def main():
         cmd_history(args)
     elif args.command == "rollback":
         cmd_rollback(args)
+    elif args.command == "doctor":
+        cmd_doctor(args)
     else:
         parser.print_help()
         sys.exit(1)
@@ -430,4 +449,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

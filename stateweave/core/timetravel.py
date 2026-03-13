@@ -190,8 +190,7 @@ class CheckpointStore:
         self._save_history(agent_id, history)
 
         logger.info(
-            f"Checkpoint v{version} for '{agent_id}' "
-            f"({content_hash[:12]}...) on branch '{branch}'"
+            f"Checkpoint v{version} for '{agent_id}' ({content_hash[:12]}...) on branch '{branch}'"
         )
 
         return metadata
@@ -254,10 +253,7 @@ class CheckpointStore:
             branch=branch_name,
         )
 
-        logger.info(
-            f"Branched '{agent_id}' v{version} → '{new_agent_id}' "
-            f"(branch: {branch_name})"
-        )
+        logger.info(f"Branched '{agent_id}' v{version} → '{new_agent_id}' (branch: {branch_name})")
         return metadata
 
     def diff_versions(
@@ -295,31 +291,23 @@ class CheckpointStore:
         if not self._root.exists():
             return []
         return [
-            d.name
-            for d in self._root.iterdir()
-            if d.is_dir() and (d / "manifest.json").exists()
+            d.name for d in self._root.iterdir() if d.is_dir() and (d / "manifest.json").exists()
         ]
 
     # --- Internal storage methods ---
 
-    def _store_full(
-        self, agent_dir: Path, version: int, payload: StateWeavePayload
-    ) -> None:
+    def _store_full(self, agent_dir: Path, version: int, payload: StateWeavePayload) -> None:
         filepath = agent_dir / f"v{version:04d}.json"
         data = self._serializer.to_dict(payload)
         with open(filepath, "w") as f:
             json.dump(data, f, indent=2, default=str)
 
-    def _store_delta(
-        self, agent_dir: Path, version: int, delta: Any
-    ) -> None:
+    def _store_delta(self, agent_dir: Path, version: int, delta: Any) -> None:
         filepath = agent_dir / f"v{version:04d}.delta.json"
         with open(filepath, "w") as f:
             json.dump(delta.model_dump(mode="json"), f, indent=2, default=str)
 
-    def _load_payload(
-        self, agent_id: str, version: int
-    ) -> Optional[StateWeavePayload]:
+    def _load_payload(self, agent_id: str, version: int) -> Optional[StateWeavePayload]:
         agent_dir = self._root / agent_id
         filepath = agent_dir / f"v{version:04d}.json"
 

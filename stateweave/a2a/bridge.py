@@ -112,9 +112,7 @@ class A2ABridge:
                         "stateweave_version": payload.stateweave_version,
                         "source_framework": payload.source_framework,
                         "agent_id": payload.metadata.agent_id,
-                        "message_count": len(
-                            payload.cognitive_state.conversation_history
-                        ),
+                        "message_count": len(payload.cognitive_state.conversation_history),
                     },
                 }
             ],
@@ -189,7 +187,8 @@ class A2ABridge:
                     "parts": [
                         {
                             "type": "text",
-                            "text": task_description or (
+                            "text": task_description
+                            or (
                                 f"Continuing work from {payload.source_framework} agent "
                                 f"'{payload.metadata.agent_id}'. Full cognitive state "
                                 f"is attached."
@@ -207,8 +206,7 @@ class A2ABridge:
         }
 
         logger.info(
-            f"Created A2A handoff task for '{payload.metadata.agent_id}' "
-            f"→ {target_agent_url}"
+            f"Created A2A handoff task for '{payload.metadata.agent_id}' → {target_agent_url}"
         )
 
         return task

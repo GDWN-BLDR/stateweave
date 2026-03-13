@@ -1,14 +1,13 @@
 """Tests for environment auto-detection and live connectors."""
 
 import unittest
-from unittest.mock import patch, MagicMock
 
 from stateweave.core.environment import (
-    scan_environment,
-    auto_select_adapter,
+    FRAMEWORK_PACKAGES,
     EnvironmentScan,
     FrameworkInfo,
-    FRAMEWORK_PACKAGES,
+    auto_select_adapter,
+    scan_environment,
 )
 
 
@@ -104,14 +103,18 @@ class TestAutoSelect(unittest.TestCase):
         # Add crewai and autogen — should prefer crewai
         scan.frameworks.append(
             FrameworkInfo(
-                name="autogen", version="0.4.0",
-                adapter_name="autogen", package_name="pyautogen",
+                name="autogen",
+                version="0.4.0",
+                adapter_name="autogen",
+                package_name="pyautogen",
             )
         )
         scan.frameworks.append(
             FrameworkInfo(
-                name="crewai", version="0.80.0",
-                adapter_name="crewai", package_name="crewai",
+                name="crewai",
+                version="0.80.0",
+                adapter_name="crewai",
+                package_name="crewai",
             )
         )
         name, cls = auto_select_adapter(scan)
@@ -127,14 +130,18 @@ class TestAutoSelect(unittest.TestCase):
         scan = EnvironmentScan()
         scan.frameworks.append(
             FrameworkInfo(
-                name="dspy", version="2.0.0",
-                adapter_name="dspy", package_name="dspy",
+                name="dspy",
+                version="2.0.0",
+                adapter_name="dspy",
+                package_name="dspy",
             )
         )
         scan.frameworks.append(
             FrameworkInfo(
-                name="langgraph", version="0.6.11",
-                adapter_name="langgraph", package_name="langgraph",
+                name="langgraph",
+                version="0.6.11",
+                adapter_name="langgraph",
+                package_name="langgraph",
             )
         )
         name, _ = auto_select_adapter(scan)

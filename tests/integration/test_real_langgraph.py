@@ -35,11 +35,7 @@ class TestRealLangGraphIntegration:
         def echo_node(state: MessagesState):
             """Simple node that generates a response based on last message."""
             last_msg = state["messages"][-1]
-            return {
-                "messages": [
-                    AIMessage(content=f"I heard you say: {last_msg.content}")
-                ]
-            }
+            return {"messages": [AIMessage(content=f"I heard you say: {last_msg.content}")]}
 
         builder = StateGraph(MessagesState)
         builder.add_node("echo", echo_node)
@@ -123,12 +119,8 @@ class TestRealLangGraphIntegration:
         mcp_payload = mcp_adapter.export_state(result["agent_id"])
 
         # Verify the round-trip preserved content
-        original_contents = {
-            m.content for m in payload.cognitive_state.conversation_history
-        }
-        roundtrip_contents = {
-            m.content for m in mcp_payload.cognitive_state.conversation_history
-        }
+        original_contents = {m.content for m in payload.cognitive_state.conversation_history}
+        roundtrip_contents = {m.content for m in mcp_payload.cognitive_state.conversation_history}
         assert original_contents == roundtrip_contents
 
     def test_export_preserves_message_metadata(self):
@@ -186,9 +178,7 @@ class TestRealLangGraphIntegration:
         # Thread B should have the messages from thread A
         if state_b.values:
             contents = [
-                m.content
-                for m in state_b.values.get("messages", [])
-                if hasattr(m, "content")
+                m.content for m in state_b.values.get("messages", []) if hasattr(m, "content")
             ]
             # The import worked if we have state
             assert result["framework"] == "langgraph"
