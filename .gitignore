@@ -48,3 +48,8 @@ board/
 breakdown/
 research/
 content/
+
+# Separate repos / not for public GitHub
+website/
+vscode-extension/
+sdk/
