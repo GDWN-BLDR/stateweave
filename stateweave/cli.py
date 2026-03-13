@@ -230,6 +230,73 @@ def cmd_generate_adapter(args):
         print(f"  → {path}")
 
 
+def cmd_scan(args):
+    """Scan environment for installed agent frameworks."""
+    from stateweave.core.environment import scan_environment
+
+    scan = scan_environment()
+    print(scan.to_report())
+
+
+def cmd_checkpoint(args):
+    """Save a checkpoint of agent state."""
+    from stateweave.core.timetravel import CheckpointStore
+
+    serializer = StateWeaveSerializer()
+
+    try:
+        with open(args.payload, "r") as f:
+            payload_dict = json.load(f)
+    except FileNotFoundError:
+        print(f"Error: File not found: {args.payload}", file=sys.stderr)
+        sys.exit(1)
+
+    payload = serializer.from_dict(payload_dict)
+    store = CheckpointStore(store_dir=args.store_dir if hasattr(args, "store_dir") and args.store_dir else None)
+
+    cp = store.checkpoint(
+        payload=payload,
+        agent_id=args.agent_id if hasattr(args, "agent_id") and args.agent_id else None,
+        label=args.label if hasattr(args, "label") and args.label else None,
+    )
+
+    print(f"✓ Checkpoint v{cp.version} saved for '{cp.agent_id}'")
+    print(f"  Hash: {cp.hash[:16]}...")
+    print(f"  Messages: {cp.message_count}")
+    print(f"  Working memory keys: {cp.working_memory_keys}")
+
+
+def cmd_history(args):
+    """Show checkpoint history for an agent."""
+    from stateweave.core.timetravel import CheckpointStore
+
+    store = CheckpointStore(store_dir=args.store_dir if hasattr(args, "store_dir") and args.store_dir else None)
+    print(store.format_history(args.agent_id))
+
+
+def cmd_rollback(args):
+    """Restore a previous checkpoint."""
+    from stateweave.core.timetravel import CheckpointStore
+
+    store = CheckpointStore(store_dir=args.store_dir if hasattr(args, "store_dir") and args.store_dir else None)
+    serializer = StateWeaveSerializer(pretty=True)
+
+    try:
+        payload = store.rollback(args.agent_id, args.version)
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    payload_dict = serializer.to_dict(payload)
+
+    if args.output:
+        with open(args.output, "w") as f:
+            json.dump(payload_dict, f, indent=2, default=str)
+        print(f"✓ Restored v{args.version} → {args.output}")
+    else:
+        print(json.dumps(payload_dict, indent=2, default=str))
+
+
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
@@ -306,6 +373,28 @@ def main():
     gen_parser.add_argument("framework_name", help="Name of the new framework")
     gen_parser.add_argument("--output-dir", default=".", help="Output directory")
 
+    # scan
+    subparsers.add_parser("scan", help="Scan environment for installed agent frameworks")
+
+    # checkpoint
+    cp_parser = subparsers.add_parser("checkpoint", help="Save a checkpoint of agent state")
+    cp_parser.add_argument("payload", help="StateWeavePayload JSON file to checkpoint")
+    cp_parser.add_argument("--agent-id", "-a", help="Override agent ID")
+    cp_parser.add_argument("--label", "-l", help="Human-readable label for this checkpoint")
+    cp_parser.add_argument("--store-dir", help="Checkpoint store directory")
+
+    # history
+    hist_parser = subparsers.add_parser("history", help="Show checkpoint history for an agent")
+    hist_parser.add_argument("agent_id", help="Agent identifier")
+    hist_parser.add_argument("--store-dir", help="Checkpoint store directory")
+
+    # rollback
+    rb_parser = subparsers.add_parser("rollback", help="Restore a previous checkpoint")
+    rb_parser.add_argument("agent_id", help="Agent identifier")
+    rb_parser.add_argument("version", type=int, help="Version number to restore")
+    rb_parser.add_argument("--output", "-o", help="Output file (default: stdout)")
+    rb_parser.add_argument("--store-dir", help="Checkpoint store directory")
+
     args = parser.parse_args()
 
     if args.command == "version":
@@ -326,6 +415,14 @@ def main():
         cmd_adapters(args)
     elif args.command == "generate-adapter":
         cmd_generate_adapter(args)
+    elif args.command == "scan":
+        cmd_scan(args)
+    elif args.command == "checkpoint":
+        cmd_checkpoint(args)
+    elif args.command == "history":
+        cmd_history(args)
+    elif args.command == "rollback":
+        cmd_rollback(args)
     else:
         parser.print_help()
         sys.exit(1)
@@ -333,3 +430,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
