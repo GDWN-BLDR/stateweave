@@ -226,6 +226,54 @@ delta = create_delta(old_payload, new_payload)
 updated = apply_delta(base_payload, delta)
 ```
 
+## Agent Time Travel
+
+Version, checkpoint, rollback, and branch agent cognitive state:
+
+```python
+from stateweave.core.timetravel import CheckpointStore
+
+store = CheckpointStore()
+
+# Save a checkpoint
+store.checkpoint(payload, label="before-experiment")
+
+# View history
+print(store.format_history("my-agent"))
+
+# Roll back to a previous version
+restored = store.rollback("my-agent", version=3)
+
+# Branch from a checkpoint
+store.branch("my-agent", version=3, new_agent_id="my-agent-experiment")
+
+# Diff two versions
+diff = store.diff_versions("my-agent", version_a=1, version_b=5)
+print(diff.to_report())
+```
+
+Content-addressable storage (SHA-256), parent hash chains, delta compression between versions.
+
+## A2A Bridge
+
+Bridge between the [Agent2Agent (A2A) protocol](https://a2a-protocol.org/) and StateWeave. A2A defines how agents communicate — StateWeave adds what agents know:
+
+```python
+from stateweave.a2a import A2ABridge
+
+bridge = A2ABridge()
+
+# Package state for A2A handoff
+artifact = bridge.create_transfer_artifact(payload)
+
+# Extract state from received A2A message
+extracted = bridge.extract_payload(a2a_message_parts)
+
+# Generate AgentCard skill for capability advertisement
+caps = bridge.get_agent_capabilities()
+skill = caps.to_agent_card_skill()
+```
+
 ## State Merge (CRDT Foundation)
 
 Merge state from parallel agents:
@@ -302,6 +350,14 @@ stateweave diff before.json after.json
 # Auto-detect source framework
 stateweave detect state.json
 
+# Scan environment for installed frameworks
+stateweave scan
+
+# Time travel — checkpoint, history, rollback
+stateweave checkpoint state.json --label "before-experiment"
+stateweave history my-agent
+stateweave rollback my-agent 3 -o restored.json
+
 # List all available adapters
 stateweave adapters
 
@@ -357,8 +413,9 @@ python scripts/uce.py
 ```
 stateweave/
 ├── schema/        # Universal Schema (Pydantic models)
-├── core/          # Engine (serializer, encryption, diff, migration, portability)
-├── adapters/      # Framework adapters (10: LangGraph, MCP, CrewAI, AutoGen, DSPy, LlamaIndex, OpenAI Agents, Haystack, Letta, Semantic Kernel)
+├── core/          # Engine (serializer, encryption, diff, delta, timetravel, environment)
+├── adapters/      # Framework adapters (10 frameworks)
+├── a2a/           # A2A protocol bridge
 ├── mcp_server/    # MCP Server implementation
 └── compliance/    # UCE scanners
 ```
