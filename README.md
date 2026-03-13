@@ -1,6 +1,7 @@
 <p align="center">
   <h1 align="center">🧶 StateWeave</h1>
-  <p align="center"><strong>Your AI agent switches frameworks. Its memories come with it.</strong></p>
+  <p align="center"><strong>Your agent switches frameworks. Its memories come with it.</strong></p>
+  <p align="center"><em>10 frameworks · 3 lines of code · 0 data loss</em></p>
   <p align="center">
     <a href="https://pypi.org/project/stateweave/"><img src="https://img.shields.io/pypi/v/stateweave?color=%2334D058&label=PyPI" alt="PyPI"></a>
     <a href="https://github.com/GDWN-BLDR/stateweave/actions"><img src="https://img.shields.io/github/actions/workflow/status/GDWN-BLDR/stateweave/ci.yml?label=CI" alt="CI"></a>
@@ -13,13 +14,19 @@
 
 <!-- mcp-name: stateweave -->
 
-**StateWeave** is a cross-framework cognitive state serializer for AI agents. It lets agents migrate between LangGraph, MCP, CrewAI, AutoGen, DSPy, LlamaIndex, OpenAI Agents, Haystack, Letta, and Semantic Kernel while preserving their accumulated knowledge — conversation history, working memory, goals, tool results, and trust parameters.
+**StateWeave** is a time-travel debugger and security control plane for AI agents. Checkpoint, rollback, diff, encrypt, sign, and migrate cognitive state across LangGraph, MCP, CrewAI, AutoGen, DSPy, LlamaIndex, OpenAI Agents, Haystack, Letta, and Semantic Kernel.
 
-No more rebuilding agent state from scratch when switching frameworks. No more vendor lock-in for your agent's brain.
+When a 20-step autonomous workflow derails at step 15, don't restart from scratch — rewind to step 14, fix the issue, and replay. When your enterprise needs to audit agent behavior, every state transition is versioned, signed, and encrypted.
 
 ## Why StateWeave?
 
-Every time you move an agent between frameworks, you lose everything it learned. StateWeave solves this with a **Universal Schema** — a canonical representation of agent cognitive state that all frameworks translate to and from. One schema, N adapters, zero data loss (with explicit warnings for anything non-portable).
+StateWeave solves three critical problems in the AI agent ecosystem:
+
+🔍 **Debugging** — Agent workflows are non-deterministic. When they go wrong, you need to pause, rewind, inspect, and replay — not restart. StateWeave gives you `git`-like version control for agent cognitive state.
+
+🔒 **Security** — Agent state contains the agent's entire cognitive history. StateWeave encrypts at rest (AES-256-GCM), signs payloads (Ed25519), strips credentials on export, and enforces compliance policies.
+
+🔄 **Portability** — Every framework has persistence, none have portability. StateWeave's **Universal Schema** — a canonical representation of agent cognitive state — lets you move state between any of 10 frameworks. One schema, N adapters, zero data loss (with explicit warnings for anything non-portable).
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
@@ -66,6 +73,23 @@ See the full [Cloud-to-Local Sandbox Escape](examples/sandbox_escape/) demo for 
 pip install stateweave
 ```
 
+### Use with Claude Desktop / Cursor
+
+Add to your MCP config (`~/.cursor/mcp.json` or Claude Desktop settings):
+
+```json
+{
+  "mcpServers": {
+    "stateweave": {
+      "command": "python3",
+      "args": ["-m", "stateweave.mcp_server"]
+    }
+  }
+}
+```
+
+Claude and Cursor can now export, import, and diff your agent state directly.
+
 ### Export an Agent's State
 
 ```python
@@ -97,9 +121,19 @@ mcp_adapter.import_state(payload)
 ```python
 from stateweave.middleware import auto_checkpoint
 
+# Simple: checkpoint every 5 steps
 @auto_checkpoint(every_n_steps=5)
 def run_agent(payload):
-    # Your agent logic here — StateWeave checkpoints automatically
+    return payload
+
+# Smart: only checkpoint on significant state changes
+@auto_checkpoint(strategy="on_significant_delta", delta_threshold=3)
+def smart_agent(payload):
+    return payload
+
+# Manual: zero overhead, checkpoint when you decide
+@auto_checkpoint(strategy="manual_only")
+def hot_path_agent(payload):
     return payload
 ```
 
@@ -331,6 +365,29 @@ Not everything can transfer between frameworks. StateWeave handles this honestly
 
 All non-portable elements appear in `payload.non_portable_warnings[]` with severity, reason, and remediation guidance.
 
+## Zero-Loss Translations
+
+Framework-specific state that doesn't map to universal fields is **not silently dropped** — it's preserved in `cognitive_state.framework_specific`:
+
+```python
+# LangGraph internals survive the round-trip
+payload = lg_adapter.export_state("my-thread")
+print(payload.cognitive_state.framework_specific)
+# {"__channel_versions__": {"messages": 5}, "checkpoint_id": "ckpt-abc"}
+
+# Import back into LangGraph — internal state is restored
+target = LangGraphAdapter()
+target.import_state(payload)
+```
+
+Three layers of state handling:
+
+| Layer | Storage | Round-Trip |
+|-------|---------|------------|
+| **Universal** | `conversation_history`, `working_memory`, etc. | ✅ Fully portable |
+| **Framework-specific** | `framework_specific` dict | ✅ Preserved in same-framework |
+| **Non-portable** | `non_portable_warnings` | ⚠️ Stripped with warnings |
+
 ## Building a Custom Adapter
 
 Extend `StateWeaveAdapter` to add support for any framework:
@@ -490,6 +547,19 @@ Add the badge to your project's README:
 
 [![StateWeave](https://img.shields.io/badge/state-StateWeave-7c3aed)](https://github.com/GDWN-BLDR/stateweave)
 
+## What StateWeave Replaces
+
+Without StateWeave, migrating agent state between frameworks means:
+
+| Task | DIY | StateWeave |
+|------|-----|------------|
+| Serialize state between frameworks | Write custom code per pair (N² effort) | `adapter.export_state()` / `import_state()` |
+| Strip credentials before export | Manual — easy to miss, leaks secrets | Auto-stripped with warnings |
+| Roll back if migration fails | No undo — restart from scratch | `checkpoint_store.rollback()` |
+| Track what was lost in translation | Hope you remember | `non_portable_warnings[]` |
+| Encrypt state for transit | DIY crypto (dangerous) | AES-256-GCM + Ed25519 built-in |
+| Audit what the agent did | Build your own logging | Versioned, signed audit trail |
+
 ## License
 
 [Apache 2.0](LICENSE) — use it, modify it, ship it. Patent shield included.
@@ -497,5 +567,5 @@ Add the badge to your project's README:
 ---
 
 <p align="center">
-  <strong>🧶 StateWeave</strong> — Because your agent's memories shouldn't be locked to one framework.
+  <strong>🧶 StateWeave</strong> — Your agent's memories shouldn't be locked to one framework.
 </p>

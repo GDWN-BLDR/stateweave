@@ -1,0 +1,156 @@
+name: Adapter Compatibility Matrix
+
+# Runs adapter tests against multiple framework versions to catch
+# breakage early. This addresses the N×M maintenance risk — the #1
+# existential threat from the external analysis.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'stateweave/adapters/**'
+      - 'tests/unit/test_*_adapter.py'
+      - 'tests/integration/**'
+  schedule:
+    # Weekly Monday 6am UTC — catches upstream framework breakage
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  tier-1-adapters:
+    name: "Tier 1: ${{ matrix.adapter }} (${{ matrix.framework-version }})"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # LangGraph — Tier 1
+          - adapter: langgraph
+            framework-version: "pinned"
+            pip-install: "langgraph==0.2.0 langchain-core==0.3.0"
+            test-path: "tests/unit/test_langgraph_adapter.py tests/integration/test_langgraph_to_mcp.py"
+          - adapter: langgraph
+            framework-version: "latest"
+            pip-install: "langgraph langchain-core"
+            test-path: "tests/unit/test_langgraph_adapter.py tests/integration/test_langgraph_to_mcp.py"
+
+          # MCP — Tier 1
+          - adapter: mcp
+            framework-version: "pinned"
+            pip-install: "mcp==1.0.0"
+            test-path: "tests/unit/test_mcp_adapter.py tests/integration/test_mcp_to_langgraph.py"
+          - adapter: mcp
+            framework-version: "latest"
+            pip-install: "mcp"
+            test-path: "tests/unit/test_mcp_adapter.py tests/integration/test_mcp_to_langgraph.py"
+
+          # CrewAI — Tier 1
+          - adapter: crewai
+            framework-version: "pinned"
+            pip-install: "crewai==0.70"
+            test-path: "tests/unit/test_crewai_adapter.py tests/integration/test_crewai_to_langgraph.py"
+          - adapter: crewai
+            framework-version: "latest"
+            pip-install: "crewai"
+            test-path: "tests/unit/test_crewai_adapter.py tests/integration/test_crewai_to_langgraph.py"
+
+          # AutoGen — Tier 1
+          - adapter: autogen
+            framework-version: "pinned"
+            pip-install: "pyautogen==0.4"
+            test-path: "tests/unit/test_autogen_adapter.py tests/integration/test_autogen_to_mcp.py"
+          - adapter: autogen
+            framework-version: "latest"
+            pip-install: "pyautogen"
+            test-path: "tests/unit/test_autogen_adapter.py tests/integration/test_autogen_to_mcp.py"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install StateWeave + framework
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install ${{ matrix.pip-install }}
+
+      - name: Run adapter tests
+        id: test
+        continue-on-error: ${{ matrix.framework-version == 'latest' }}
+        run: |
+          python -m pytest ${{ matrix.test-path }} -v --tb=short \
+            --junitxml=adapter-results-${{ matrix.adapter }}-${{ matrix.framework-version }}.xml
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: adapter-${{ matrix.adapter }}-${{ matrix.framework-version }}
+          path: adapter-results-*.xml
+
+  tier-2-adapters:
+    name: "Tier 2: ${{ matrix.adapter }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - adapter: dspy
+            test-path: "tests/unit/test_dspy_adapter.py tests/integration/test_dspy_to_mcp.py"
+          - adapter: openai-agents
+            test-path: "tests/unit/test_openai_agents_adapter.py tests/integration/test_openai_agents_to_langgraph.py"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install StateWeave
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run adapter tests
+        run: |
+          python -m pytest ${{ matrix.test-path }} -v --tb=short
+
+  community-adapters:
+    name: "Community: ${{ matrix.adapter }}"
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - adapter: haystack
+            test-path: "tests/unit/test_haystack_adapter.py"
+          - adapter: letta
+            test-path: "tests/unit/test_letta_adapter.py"
+          - adapter: llamaindex
+            test-path: "tests/unit/test_llamaindex_adapter.py"
+          - adapter: semantic-kernel
+            test-path: "tests/unit/test_semantic_kernel_adapter.py"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install StateWeave
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run adapter tests
+        run: |
+          python -m pytest ${{ matrix.test-path }} -v --tb=short

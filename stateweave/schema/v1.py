@@ -77,6 +77,14 @@ class CognitiveState(BaseModel):
     trust_parameters: Dict[str, float] = Field(default_factory=dict)
     long_term_memory: Dict[str, Any] = Field(default_factory=dict)
     episodic_memory: List[Dict[str, Any]] = Field(default_factory=list)
+    framework_specific: Dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Framework-native state that doesn't map to universal fields. "
+            "Preserved during round-trips to the same framework. Enables "
+            "zero-loss translation when source == target framework."
+        ),
+    )
 
 
 class NonPortableWarningSeverity(str, Enum):

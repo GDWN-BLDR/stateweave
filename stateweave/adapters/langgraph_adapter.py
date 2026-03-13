@@ -263,9 +263,13 @@ class LangGraphAdapter(StateWeaveAdapter):
         working_memory = {}
         tool_results = {}
 
+        framework_specific = {}
+
         for key, value in state.items():
             if key in LANGGRAPH_INTERNAL_FIELDS:
-                continue  # Skip internal fields
+                # Preserve in framework_specific for zero-loss round-trips
+                framework_specific[key] = value
+                continue
 
             # Detect message lists
             if key == "messages" and isinstance(value, list) and include_history:
@@ -290,6 +294,7 @@ class LangGraphAdapter(StateWeaveAdapter):
             conversation_history=messages,
             working_memory=working_memory,
             tool_results_cache=tool_results,
+            framework_specific=framework_specific,
         )
 
     def _translate_message(self, msg: Any) -> Optional[Message]:
@@ -351,6 +356,12 @@ class LangGraphAdapter(StateWeaveAdapter):
                 state[f"{key}_results"] = (
                     tool_result.result if isinstance(tool_result, ToolResult) else tool_result
                 )
+
+        # Restore framework-specific LangGraph state for zero-loss round-trips
+        if cognitive_state.framework_specific:
+            for key, value in cognitive_state.framework_specific.items():
+                if key in LANGGRAPH_INTERNAL_FIELDS:
+                    state[key] = value
 
         return state
 
