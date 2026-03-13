@@ -49,5 +49,7 @@ breakdown/
 research/
 content/
 
-website/.vite/
-website/.vite/
+# Private assets (not for public repo)
+website/
+vscode-extension/
+sdk/
