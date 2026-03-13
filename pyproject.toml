@@ -1,0 +1,98 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stateweave"
+version = "0.3.0"
+description = "Cross-framework cognitive state serializer for AI agents"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Michael Goodwin"},
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "pydantic>=2.0",
+    "cryptography>=41.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+langgraph = [
+    "langgraph>=0.2.0",
+    "langchain-core>=0.3.0",
+]
+mcp = [
+    "mcp>=1.0.0",
+]
+crewai = [
+    "crewai>=0.70",
+]
+autogen = [
+    "pyautogen>=0.4",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.23",
+    "hypothesis>=6.0",
+    "ruff>=0.3.0",
+    "mypy>=1.8",
+]
+all = [
+    "stateweave[langgraph,mcp,crewai,autogen,dev]",
+]
+
+[project.scripts]
+stateweave = "stateweave.cli:main"
+stateweave-mcp-server = "stateweave.mcp_server.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/GDWN-BLDR/stateweave"
+Documentation = "https://github.com/GDWN-BLDR/stateweave#readme"
+Repository = "https://github.com/GDWN-BLDR/stateweave"
+Issues = "https://github.com/GDWN-BLDR/stateweave/issues"
+Changelog = "https://github.com/GDWN-BLDR/stateweave/blob/main/CHANGELOG.md"
+
+[tool.setuptools.packages.find]
+include = ["stateweave*"]
+
+[tool.setuptools.package-data]
+stateweave = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+"examples/*" = ["E501"]
+"tests/*" = ["E501", "F841"]
+"stateweave/mcp_server/__main__.py" = ["E501"]
+"stateweave/cli.py" = ["E402", "E501"]
+"stateweave/adapters/*" = ["E501"]
+"stateweave/core/*" = ["E501"]
+"stateweave/compliance/*" = ["E501", "E402"]
+"scripts/*" = ["E501", "E402"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true

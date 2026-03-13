@@ -1,0 +1,29 @@
+{
+  "name": "@stateweave/sdk",
+  "version": "0.3.0",
+  "description": "StateWeave TypeScript SDK — Universal Schema types and REST API client",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist/"],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GDWN-BLDR/stateweave"
+  },
+  "license": "Apache-2.0",
+  "keywords": [
+    "stateweave",
+    "ai-agents",
+    "state-portability",
+    "mcp",
+    "langgraph",
+    "crewai",
+    "autogen"
+  ]
+}

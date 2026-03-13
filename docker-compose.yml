@@ -1,0 +1,44 @@
+services:
+  # ── MCP Server (stdio mode, for local development) ──
+  stateweave-mcp:
+    build: .
+    container_name: stateweave-mcp
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    volumes:
+      - stateweave-data:/app/data
+    environment:
+      - STATEWEAVE_LOG_LEVEL=INFO
+      - STATEWEAVE_LOG_FORMAT=json
+    healthcheck:
+      test: ["CMD", "python", "-c", "from stateweave import __version__; print(__version__)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── REST API (HTTP mode, for production deployment) ──
+  stateweave-api:
+    build: .
+    container_name: stateweave-api
+    entrypoint: ["python", "-m", "stateweave.rest_api"]
+    ports:
+      - "8080:8080"
+    volumes:
+      - stateweave-data:/app/data
+    environment:
+      - STATEWEAVE_LOG_LEVEL=INFO
+      - STATEWEAVE_LOG_FORMAT=json
+      - STATEWEAVE_HOST=0.0.0.0
+      - STATEWEAVE_PORT=8080
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  stateweave-data:
+

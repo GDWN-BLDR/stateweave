@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StateWeave — Cross-Framework Agent State Portability</title>
+  <meta name="description" content="Your AI agent switches frameworks — its memories come with it. Export from LangGraph, import into MCP. Zero silent data loss. Open source.">
+  <meta name="keywords" content="AI agent state portability, LangGraph, MCP, CrewAI, AutoGen, agent migration, cognitive state, cross-framework, open source, middleware">
+  <meta name="robots" content="index, follow">
+
+  <meta property="og:title" content="StateWeave — Your agent switches frameworks. Its brain doesn't break.">
+  <meta property="og:description" content="Cross-framework cognitive state portability for AI agents. Open source, Apache 2.0.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://stateweave.pantollventures.com/">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="StateWeave — Agent State Portability">
+  <meta name="twitter:description" content="Export from LangGraph, import into MCP. Zero silent data loss.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/style.css">
+
+  <!-- JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "StateWeave",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Cross-platform",
+    "description": "Cross-framework cognitive state serializer for AI agents. Migrate between LangGraph, MCP, CrewAI, AutoGen, DSPy, LlamaIndex, OpenAI Agents, Haystack, Letta, and Semantic Kernel while preserving accumulated knowledge.",
+    "url": "https://stateweave.pantollventures.com/",
+    "downloadUrl": "https://pypi.org/project/stateweave/",
+    "softwareVersion": "0.3.0",
+    "license": "https://www.apache.org/licenses/LICENSE-2.0",
+    "programmingLanguage": "Python",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "potentialAction": {
+      "@type": "InstallAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": "https://pypi.org/project/stateweave/",
+        "actionPlatform": "https://schema.org/DesktopWebPlatform"
+      }
+    }
+  }
+  </script>
+
+  <!-- FAQ Schema -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "How do I migrate AI agent state between frameworks?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Use StateWeave to export agent state from any supported framework (LangGraph, MCP, CrewAI, AutoGen, DSPy, LlamaIndex, OpenAI Agents, Haystack, Letta, Semantic Kernel) into a Universal Schema, then import it into any other framework. Install with pip install stateweave."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What happens to non-portable state during migration?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "StateWeave never silently drops state. Non-portable elements like database connections, credentials, and framework internals are explicitly flagged with severity, reason, and remediation guidance in non_portable_warnings."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is agent state encrypted during transport?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. StateWeave uses AES-256-GCM authenticated encryption with PBKDF2 key derivation (600K iterations, OWASP recommended). Each operation gets a unique nonce."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I add support for a new agent framework?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Subclass StateWeaveAdapter and implement four methods: framework_name, export_state, import_state, and list_agents. Your new adapter instantly gets compatibility with all existing adapters through the star topology."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does StateWeave work as an MCP server?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. StateWeave ships as an MCP Server with tools for export_agent_state, import_agent_state, and diff_agent_states. Any MCP-compatible AI assistant can use it directly."
+        }
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+  <a href="#hero" class="skip-to-content">Skip to content</a>
+
+  <!-- ══════ NAV ══════ -->
+  <nav class="nav" id="nav" aria-label="Main navigation">
+    <div class="nav-inner">
+      <a href="#" class="nav-logo">
+        <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+          <path d="M16 2L4 9v14l12 7 12-7V9L16 2z" stroke="url(#logo-grad)" stroke-width="2" fill="none"/>
+          <path d="M16 2v28M4 9l12 7 12-7M4 23l12-7 12 7" stroke="url(#logo-grad)" stroke-width="1.5" opacity="0.5"/>
+          <circle cx="16" cy="16" r="3" fill="url(#logo-grad)"/>
+          <defs>
+            <linearGradient id="logo-grad" x1="4" y1="2" x2="28" y2="30">
+              <stop stop-color="#7c3aed"/><stop offset="1" stop-color="#06b6d4"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        StateWeave
+      </a>
+      <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-links" id="nav-links">
+        <li><a href="#compare">How it works</a></li>
+        <li><a href="#demo">Quick Start</a></li>
+        <li><a href="#frameworks">Frameworks</a></li>
+        <li><a href="#schema">Schema</a></li>
+        <li><a href="https://github.com/GDWN-BLDR/stateweave#readme" target="_blank" rel="noopener">Docs</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a href="https://github.com/GDWN-BLDR/stateweave" target="_blank" rel="noopener" class="nav-cta">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          GitHub
+          <span class="nav-stars" id="star-count"></span>
+        </a></li>
+      </ul>
+    </div>
+  </nav>
+  <div class="scroll-progress" id="scroll-progress"></div>
+
+  <main>
+    <!-- ══════ HERO ══════ -->
+    <section class="hero" id="hero" aria-label="Introduction">
+      <div class="hero-logo">
+        <svg width="56" height="56" viewBox="0 0 32 32" fill="none">
+          <path d="M16 2L4 9v14l12 7 12-7V9L16 2z" stroke="url(#hero-logo-grad)" stroke-width="1.5" fill="none"/>
+          <path d="M16 2v28M4 9l12 7 12-7M4 23l12-7 12 7" stroke="url(#hero-logo-grad)" stroke-width="1" opacity="0.4"/>
+          <circle cx="16" cy="16" r="4" fill="url(#hero-logo-grad)" opacity="0.9"/>
+          <circle cx="16" cy="2" r="1.5" fill="#7c3aed"/>
+          <circle cx="4" cy="9" r="1.5" fill="#6d28d9"/>
+          <circle cx="28" cy="9" r="1.5" fill="#5b21b6"/>
+          <circle cx="4" cy="23" r="1.5" fill="#0891b2"/>
+          <circle cx="28" cy="23" r="1.5" fill="#06b6d4"/>
+          <circle cx="16" cy="30" r="1.5" fill="#22d3ee"/>
+          <defs>
+            <linearGradient id="hero-logo-grad" x1="4" y1="2" x2="28" y2="30">
+              <stop stop-color="#7c3aed"/><stop offset="1" stop-color="#06b6d4"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+
+      <h1 class="hero-title">
+        Your agent switches frameworks.<br>
+        <span class="gradient-text">Its brain doesn't break.</span>
+      </h1>
+
+      <p class="hero-sub">
+        Cross-framework cognitive state portability for AI agents.<br>
+        LangGraph &harr; MCP &harr; CrewAI &harr; AutoGen &harr; DSPy &harr; LlamaIndex &amp; more. Open source.
+      </p>
+
+      <div class="hero-actions">
+        <div class="terminal" id="install-cmd">
+          <span class="terminal-prompt">$</span>
+          <span id="terminal-text"></span>
+          <span class="terminal-cursor"></span>
+          <button class="copy-btn" data-copy="pip install stateweave" aria-label="Copy">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          </button>
+        </div>
+        <a href="https://github.com/GDWN-BLDR/stateweave" target="_blank" rel="noopener" class="btn btn-ghost">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          View on GitHub
+        </a>
+      </div>
+
+      <div class="trust-bar">
+        <div class="trust-item">
+          <span class="trust-value">MCP Server</span>
+          <span class="trust-label">Ships built-in</span>
+        </div>
+        <div class="separator"></div>
+        <div class="trust-item">
+          <span class="trust-value">Encrypted</span>
+          <span class="trust-label">AES-256-GCM</span>
+        </div>
+        <div class="separator"></div>
+        <div class="trust-item">
+          <span class="trust-value">Portable</span>
+          <span class="trust-label">10 frameworks</span>
+        </div>
+        <div class="separator"></div>
+        <div class="trust-item">
+          <span class="trust-value">Tested</span>
+          <span class="trust-label">315 tests</span>
+        </div>
+        <div class="separator"></div>
+        <div class="trust-item">
+          <span class="trust-value">Apache 2.0</span>
+          <span class="trust-label">License</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════ COMPARISON ══════ -->
+    <section class="section" id="compare" aria-label="Problem and solution comparison">
+      <div class="container">
+        <div class="section-header reveal">
+          <span class="section-label">The Problem</span>
+          <h2>Every migration erases your agent's brain</h2>
+          <p>Without a standard, switching frameworks means losing everything your agent learned.</p>
+        </div>
+
+        <div class="comparison reveal">
+          <div class="compare-card compare-bad">
+            <div class="compare-header">
+              <span class="compare-dot"></span>
+              Without StateWeave
+            </div>
+<pre><code><span class="cmt"># Agent accumulated 8 messages, 4 findings</span>
+<span class="cmt"># Switch from LangGraph → MCP...</span>
+
+<span class="line-strike">conversation_history  → lost</span>
+<span class="line-strike">working_memory        → lost</span>
+<span class="line-strike">research_findings     → lost</span>
+<span class="line-strike">confidence_score      → lost</span>
+<span class="line-strike">tool_results          → lost</span>
+
+<span class="cmt"># Start over from scratch.</span></code></pre>
+          </div>
+          <div class="compare-card compare-good">
+            <div class="compare-header">
+              <span class="compare-dot"></span>
+              With StateWeave
+            </div>
+<pre><code><span class="cmt"># Export → Encrypt → Import. Done.</span>
+
+<span class="var">payload</span> = adapter.<span class="fn">export_state</span>(<span class="str">"agent-1"</span>)
+mcp_adapter.<span class="fn">import_state</span>(payload)
+
+<span class="line-add">conversation_history  → preserved ✓</span>
+<span class="line-add">working_memory        → preserved ✓</span>
+<span class="line-add">research_findings     → preserved ✓</span>
+<span class="line-add">confidence_score      → preserved ✓</span>
+<span class="line-add">tool_results          → preserved ✓</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════ ARCHITECTURE ══════ -->
+    <section class="section section-alt" id="arch" aria-label="Architecture diagram">
+      <div class="container">
+        <div class="section-header reveal">
+          <span class="section-label">Architecture</span>
+          <h2>N adapters, not N² translations</h2>
+          <p>Star topology. Every framework translates to one Universal Schema. Adding a framework = one adapter.</p>
+        </div>
+
+        <div class="arch-visual reveal">
+          <svg class="arch-svg" viewBox="0 0 600 300" fill="none">
+            <!-- Framework nodes -->
+            <g>
+              <rect x="20" y="50" width="100" height="40" rx="8" fill="#111" stroke="#333" stroke-width="1"/>
+              <text x="70" y="75" text-anchor="middle" fill="#ededed" font-family="Inter,sans-serif" font-size="12" font-weight="600">LangGraph</text>
+            </g>
+            <g>
+              <rect x="20" y="130" width="100" height="40" rx="8" fill="#111" stroke="#333" stroke-width="1"/>
+              <text x="70" y="155" text-anchor="middle" fill="#ededed" font-family="Inter,sans-serif" font-size="12" font-weight="600">CrewAI</text>
+            </g>
+            <g>
+              <rect x="20" y="210" width="100" height="40" rx="8" fill="#111" stroke="#333" stroke-width="1"/>
+              <text x="70" y="235" text-anchor="middle" fill="#ededed" font-family="Inter,sans-serif" font-size="12" font-weight="600">AutoGen</text>
+            </g>
+
+            <!-- Center Schema -->
+            <rect x="220" y="105" width="160" height="90" rx="12" fill="none" stroke="url(#arch-grad)" stroke-width="2"/>
+            <text x="300" y="143" text-anchor="middle" fill="#a78bfa" font-family="Inter,sans-serif" font-size="11" font-weight="700">UNIVERSAL</text>
+            <text x="300" y="163" text-anchor="middle" fill="#a78bfa" font-family="Inter,sans-serif" font-size="11" font-weight="700">SCHEMA</text>
+
+            <!-- Right frameworks -->
+            <g>
+              <rect x="480" y="50" width="100" height="40" rx="8" fill="#111" stroke="#333" stroke-width="1"/>
+              <text x="530" y="75" text-anchor="middle" fill="#ededed" font-family="Inter,sans-serif" font-size="12" font-weight="600">MCP</text>
+            </g>
+            <g>
+              <rect x="480" y="130" width="100" height="40" rx="8" fill="#111" stroke="#333" stroke-width="1"/>
+              <text x="530" y="155" text-anchor="middle" fill="#ededed" font-family="Inter,sans-serif" font-size="12" font-weight="600">Letta</text>
+            </g>
+            <g>
+              <rect x="480" y="210" width="100" height="40" rx="8" fill="#111" stroke="#333" stroke-width="1"/>
+              <text x="530" y="235" text-anchor="middle" fill="#ededed" font-family="Inter,sans-serif" font-size="12" font-weight="600">Custom</text>
+            </g>
+
+            <!-- Connection lines with animation -->
+            <line x1="120" y1="70" x2="220" y2="140" stroke="#333" stroke-width="1" stroke-dasharray="4 3" class="arch-line"/>
+            <line x1="120" y1="150" x2="220" y2="150" stroke="#333" stroke-width="1" stroke-dasharray="4 3" class="arch-line"/>
+            <line x1="120" y1="230" x2="220" y2="160" stroke="#333" stroke-width="1" stroke-dasharray="4 3" class="arch-line"/>
+            <line x1="380" y1="140" x2="480" y2="70" stroke="#333" stroke-width="1" stroke-dasharray="4 3" class="arch-line"/>
+            <line x1="380" y1="150" x2="480" y2="150" stroke="#333" stroke-width="1" stroke-dasharray="4 3" class="arch-line"/>
+            <line x1="380" y1="160" x2="480" y2="230" stroke="#333" stroke-width="1" stroke-dasharray="4 3" class="arch-line"/>
+
+            <!-- Animated dots traveling the lines -->
+            <circle r="3" fill="#7c3aed">
+              <animateMotion dur="3s" repeatCount="indefinite" path="M120,70 L220,140" />
+            </circle>
+            <circle r="3" fill="#06b6d4">
+              <animateMotion dur="3s" repeatCount="indefinite" begin="1s" path="M380,140 L480,70" />
+            </circle>
+            <circle r="3" fill="#a78bfa">
+              <animateMotion dur="3s" repeatCount="indefinite" begin="2s" path="M120,150 L220,150" />
+            </circle>
+
+            <defs>
+              <linearGradient id="arch-grad" x1="220" y1="105" x2="380" y2="195">
+                <stop stop-color="#7c3aed"/><stop offset="1" stop-color="#06b6d4"/>
+              </linearGradient>
+            </defs>
+          </svg>
+
+          <p class="arch-caption">
+            <strong>Star topology</strong> — each framework only needs to translate to the Universal Schema.
+            Adding framework <em>N</em> costs 1 adapter, gives <em>N-1</em> migration paths.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════ CODE DEMO ══════ -->
+    <section class="section" id="demo" aria-label="Interactive code demonstration">
+      <div class="container">
+        <div class="section-header reveal">
+          <span class="section-label">Code</span>
+          <h2>Export. Import. Done.</h2>
+          <p>Export state, import state. Encrypted, validated, with explicit non-portable warnings.</p>
+        </div>
+
+        <div class="demo-terminal reveal">
+          <div class="demo-titlebar">
+            <div class="demo-dots"><span></span><span></span><span></span></div>
+            <span class="demo-filename" id="demo-filename">export.py</span>
+          </div>
+          <div class="demo-tabs">
+            <button class="demo-tab active" data-tab="export">Export</button>
+            <button class="demo-tab" data-tab="import">Import</button>
+            <button class="demo-tab" data-tab="encrypt">Encrypt</button>
+            <button class="demo-tab" data-tab="diff">Diff</button>
+          </div>
+          <div class="demo-body">
+            <div class="demo-panel active" id="panel-export">
+<pre><code><span class="kw">from</span> <span class="mod">stateweave.adapters.langgraph_adapter</span> <span class="kw">import</span> <span class="cls">LangGraphAdapter</span>
+<span class="kw">from</span> <span class="mod">stateweave.core.serializer</span> <span class="kw">import</span> <span class="cls">StateWeaveSerializer</span>
+
+<span class="cmt"># Pass your LangGraph checkpointer instance</span>
+<span class="var">adapter</span> = <span class="cls">LangGraphAdapter</span>(checkpointer=my_checkpointer)
+<span class="var">payload</span> = adapter.<span class="fn">export_state</span>(<span class="str">"my-thread-id"</span>)
+
+<span class="var">serializer</span> = <span class="cls">StateWeaveSerializer</span>()
+<span class="var">raw_bytes</span> = serializer.<span class="fn">dumps</span>(payload)</code></pre>
+            </div>
+            <div class="demo-panel" id="panel-import">
+<pre><code><span class="kw">from</span> <span class="mod">stateweave.adapters.mcp_adapter</span> <span class="kw">import</span> <span class="cls">MCPAdapter</span>
+
+<span class="var">mcp_adapter</span> = <span class="cls">MCPAdapter</span>()
+mcp_adapter.<span class="fn">import_state</span>(payload)
+
+<span class="cmt"># Agent resumes with its full context intact.</span>
+<span class="cmt"># Conversation history, working memory, goals — all preserved.</span></code></pre>
+            </div>
+            <div class="demo-panel" id="panel-encrypt">
+<pre><code><span class="kw">from</span> <span class="mod">stateweave.core.encryption</span> <span class="kw">import</span> <span class="cls">EncryptionFacade</span>
+<span class="kw">from</span> <span class="mod">stateweave.core.migration</span> <span class="kw">import</span> <span class="cls">MigrationEngine</span>
+
+<span class="var">key</span> = <span class="cls">EncryptionFacade</span>.<span class="fn">generate_key</span>()
+<span class="var">engine</span> = <span class="cls">MigrationEngine</span>(encryption=<span class="cls">EncryptionFacade</span>(key))
+
+<span class="var">result</span> = engine.<span class="fn">export_state</span>(
+    adapter=langgraph_adapter,
+    agent_id=<span class="str">"my-agent"</span>,
+    encrypt=<span class="bool">True</span>,
+)
+
+engine.<span class="fn">import_state</span>(
+    adapter=mcp_adapter,
+    encrypted_data=result.encrypted_data,
+    nonce=result.nonce,
+)</code></pre>
+            </div>
+            <div class="demo-panel" id="panel-diff">
+<pre><code><span class="kw">from</span> <span class="mod">stateweave.core.diff</span> <span class="kw">import</span> <span class="fn">diff_payloads</span>
+
+<span class="var">diff</span> = <span class="fn">diff_payloads</span>(state_before, state_after)
+<span class="fn">print</span>(diff.<span class="fn">to_report</span>())
+
+<span class="cmt"># ═════════════════════════════════════════</span>
+<span class="cmt">#  STATEWEAVE DIFF REPORT</span>
+<span class="cmt"># ═════════════════════════════════════════</span>
+<span class="cmt">#  Changes: 5 <span class="line-add">(+2 -1 ~2)</span></span>
+<span class="cmt">#  [working_memory]</span>
+<span class="cmt">#    <span class="line-add">+ working_memory.new_task: "research"</span></span>
+<span class="cmt">#    <span class="line-add">~ confidence: 0.7 → 0.95</span></span></code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div style="text-align: center; margin-top: -2rem; margin-bottom: 2rem; opacity: 0; animation: fade-up 0.8s var(--ease-out) 0.8s forwards;">
+      <p style="font-size: 0.85rem; color: var(--text-muted);">
+        Want copy-paste-and-run code? See <a href="https://github.com/GDWN-BLDR/stateweave/blob/main/examples/quickstart.py" target="_blank" rel="noopener" style="color: var(--accent-light);">examples/quickstart.py</a>
+      </p>
+    </div>
+
+    <!-- ══════ FRAMEWORKS ══════ -->
+    <section class="section section-alt" id="frameworks" aria-label="Supported frameworks">
+      <div class="container">
+        <div class="section-header reveal">
+          <span class="section-label">Frameworks</span>
+          <h2>Growing adapter ecosystem</h2>
+          <p>Star topology. One adapter per framework = instant compatibility with all others.</p>
+        </div>
+
+        <div class="fw-table reveal">
+          <table>
+            <thead>
+              <tr>
+                <th>Framework</th>
+                <th class="col-export">Export</th>
+                <th class="col-import">Import</th>
+                <th>Tier</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>LangGraph</td>
+                <td class="status-ok col-export">✓</td>
+                <td class="status-ok col-import">✓</td>
+                <td><span class="badge-stable">🟢 Tier 1</span></td>
+              </tr>
+              <tr>
+                <td>MCP</td>
+                <td class="status-ok col-export">✓</td>
+                <td class="status-ok col-import">✓</td>
+                <td><span class="badge-stable">🟢 Tier 1</span></td>
+              </tr>
+              <tr>
+                <td>CrewAI</td>
+                <td class="status-ok col-export">✓</td>
+                <td class="status-ok col-import">✓</td>
+                <td><span class="badge-stable">🟢 Tier 1</span></td>
+              </tr>
+              <tr>
+                <td>AutoGen</td>
+                <td class="status-ok col-export">✓</td>
+                <td class="status-ok col-import">✓</td>
+                <td><span class="badge-stable">🟢 Tier 1</span></td>
+              </tr>
+              <tr>
+                <td>DSPy</td>
+                <td class="status-ok col-export">✓</td>
+                <td class="status-ok col-import">✓</td>
+                <td><span class="badge-tier2">🟡 Tier 2</span></td>
+              </tr>
+              <tr>
+                <td>OpenAI Agents</td>
+                <td class="status-ok col-export">✓</td>
+                <td class="status-ok col-import">✓</td>
+                <td><span class="badge-tier2">🟡 Tier 2</span></td>
+              </tr>
+              <tr>
+                <td>LlamaIndex</td>
+                <td class="status-ok col-export">✓</td>
+                <td class="status-ok col-import">✓</td>
+                <td><span class="badge-community">🔵 Community</span></td>
+              </tr>
+              <tr>
+                <td>Haystack</td>
+                <td class="status-ok col-export">✓</td>
+                <td class="status-ok col-import">✓</td>
+                <td><span class="badge-community">🔵 Community</span></td>
+              </tr>
+              <tr>
+                <td>Letta / MemGPT</td>
+                <td class="status-ok col-export">✓</td>
+                <td class="status-ok col-import">✓</td>
+                <td><span class="badge-community">🔵 Community</span></td>
+              </tr>
+              <tr>
+                <td>Semantic Kernel</td>
+                <td class="status-ok col-export">✓</td>
+                <td class="status-ok col-import">✓</td>
+                <td><span class="badge-community">🔵 Community</span></td>
+              </tr>
+              <tr>
+                <td>Custom</td>
+                <td class="status-ok col-export">✓</td>
+                <td class="status-ok col-import">✓</td>
+                <td><span class="badge-roadmap">Extensible</span></td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="tier-legend">🟢 <strong>Tier 1</strong> = Core team, guaranteed stability &nbsp;·&nbsp; 🟡 <strong>Tier 2</strong> = Actively maintained &nbsp;·&nbsp; 🔵 <strong>Community</strong> = Best-effort</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════ MCP SERVER ══════ -->
+    <section class="section" id="mcp" aria-label="MCP Server capabilities">
+      <div class="container">
+        <div class="section-header reveal">
+          <span class="section-label">MCP Server</span>
+          <h2>Ships as an MCP Server</h2>
+          <p>Any MCP-compatible assistant can export, import, and diff agent state directly.</p>
+        </div>
+
+        <div class="mcp-grid reveal">
+          <div class="mcp-card">
+            <h3>Tools</h3>
+            <div class="mcp-item">
+              <span class="mcp-name">export_agent_state</span>
+              <span class="mcp-desc">Export cognitive state from any framework</span>
+            </div>
+            <div class="mcp-item">
+              <span class="mcp-name">import_agent_state</span>
+              <span class="mcp-desc">Import into target framework with validation</span>
+            </div>
+            <div class="mcp-item">
+              <span class="mcp-name">diff_agent_states</span>
+              <span class="mcp-desc">Detailed change report between two states</span>
+            </div>
+          </div>
+          <div class="mcp-card">
+            <h3>Resources</h3>
+            <div class="mcp-item">
+              <span class="mcp-name">schemas/v1</span>
+              <span class="mcp-desc">Universal Schema specification</span>
+            </div>
+            <div class="mcp-item">
+              <span class="mcp-name">migrations/history</span>
+              <span class="mcp-desc">Migration history log</span>
+            </div>
+            <div class="mcp-item">
+              <span class="mcp-name">agents/{id}/snapshot</span>
+              <span class="mcp-desc">Live agent state snapshot</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════ SECURITY ══════ -->
+    <section class="section section-alt" id="security" aria-label="Security features">
+      <div class="container">
+        <div class="section-header reveal">
+          <span class="section-label">Encryption</span>
+          <h2>Encrypted. Validated. Zero silent loss.</h2>
+        </div>
+
+        <div class="security-grid reveal">
+          <div class="security-card">
+            <h3>AES-256-GCM</h3>
+            <p>Authenticated encryption. Unique nonce per operation. Ciphertext bound to agent metadata.</p>
+          </div>
+          <div class="security-card">
+            <h3>Ed25519 Signing</h3>
+            <p>Digital signatures verify sender identity and detect tampering. Sign, verify, and attach to payloads.</p>
+          </div>
+          <div class="security-card">
+            <h3>PBKDF2 · 600K</h3>
+            <p>OWASP-recommended key derivation. Passphrase-based with versioned key IDs.</p>
+          </div>
+          <div class="security-card">
+            <h3>Credential Stripping</h3>
+            <p>API keys, OAuth tokens, and passwords are flagged as non-portable and stripped on export.</p>
+          </div>
+          <div class="security-card">
+            <h3>Non-Portable Warnings</h3>
+            <p>Every non-transferable element is documented with severity, reason, and remediation. Never silent.</p>
+          </div>
+          <div class="security-card">
+            <h3>REST API + Docker</h3>
+            <p>Deploy behind your firewall. Dockerfile and docker-compose included.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════ ADVANCED FEATURES ══════ -->
+    <section class="section" id="features" aria-label="Advanced features">
+      <div class="container">
+        <div class="section-header reveal">
+          <span class="section-label">v0.3 Features</span>
+          <h2>Delta transport. State merge. Compliance.</h2>
+          <p>Ship only state diffs. Merge parallel agents. Enforce compliance with 10 automated scanners.</p>
+        </div>
+
+        <div class="security-grid reveal">
+          <div class="security-card">
+            <h3>Delta Transport</h3>
+            <p>Send only state differences instead of full payloads. SHA-256 hash verification prevents base mismatch.</p>
+          </div>
+          <div class="security-card">
+            <h3>State Merge (CRDT)</h3>
+            <p>Merge parallel agents with conflict resolution: Last-Writer-Wins, Union, or Manual review.</p>
+          </div>
+          <div class="security-card">
+            <h3>UCE Compliance</h3>
+            <p>10 automated scanners enforce schema integrity, encryption, import discipline, and test coverage. Zero false passes.</p>
+          </div>
+          <div class="security-card">
+            <h3>Auto-Detection</h3>
+            <p><code>stateweave detect</code> identifies source framework from raw state via fingerprinting heuristics.</p>
+          </div>
+          <div class="security-card">
+            <h3>Migration Reports</h3>
+            <p>HTML, Markdown, and JSON reports with fidelity scores, audit trails, and non-portable analysis.</p>
+          </div>
+          <div class="security-card">
+            <h3>Observability</h3>
+            <p>Structured JSON logging, in-memory metrics, and trace_operation context manager for monitoring.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════ SCHEMA ══════ -->
+    <section class="section" id="schema" aria-label="Universal Schema definition">
+      <div class="container">
+        <div class="section-header reveal">
+          <span class="section-label">Schema</span>
+          <h2>One canonical format</h2>
+          <p>Every framework translates to and from the Universal Schema. Star topology, not mesh.</p>
+        </div>
+
+        <div class="schema-layout reveal">
+          <div class="schema-code">
+            <div class="schema-code-header">StateWeavePayload</div>
+<pre><code><span class="cls">StateWeavePayload</span>(
+  stateweave_version=<span class="str">"0.3.0"</span>,
+  source_framework=<span class="str">"langgraph"</span>,
+  cognitive_state=<span class="cls">CognitiveState</span>(
+    conversation_history=[...],
+    working_memory={...},
+    goal_tree={...},
+    tool_results_cache={...},
+    trust_parameters={...},
+    long_term_memory={...},
+    episodic_memory=[...],
+  ),
+  metadata=<span class="cls">AgentMetadata</span>(...),
+  audit_trail=[...],
+  non_portable_warnings=[...],
+)</code></pre>
+          </div>
+          <div class="schema-fields">
+            <div class="field-item">
+              <div class="field-name">conversation_history</div>
+              <div class="field-desc">Complete message thread — human, AI, system, tool messages</div>
+            </div>
+            <div class="field-item">
+              <div class="field-name">working_memory</div>
+              <div class="field-desc">Current task state, key-value pairs, active research context</div>
+            </div>
+            <div class="field-item">
+              <div class="field-name">goal_tree</div>
+              <div class="field-desc">Active goals, sub-goals, completion status</div>
+            </div>
+            <div class="field-item">
+              <div class="field-name">tool_results_cache</div>
+              <div class="field-desc">Cached outputs from web searches, file reads, API responses</div>
+            </div>
+            <div class="field-item">
+              <div class="field-name">trust_parameters</div>
+              <div class="field-desc">Confidence scores, reliability metrics, source credibility</div>
+            </div>
+            <div class="field-item">
+              <div class="field-name">audit_trail</div>
+              <div class="field-desc">Full operation history — every export, import, migration logged</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════ ADAPTER ══════ -->
+    <section class="section section-alt" id="adapter" aria-label="Build a custom adapter">
+      <div class="container">
+        <div class="section-header reveal">
+          <span class="section-label">Extend</span>
+          <h2>One adapter, N connections</h2>
+          <p>Subclass one ABC. Implement four methods. Instant compatibility with the entire ecosystem.</p>
+        </div>
+
+        <div class="adapter-code reveal">
+          <div class="adapter-code-header">
+            <span class="adapter-label">my_adapter.py</span>
+            <button class="copy-btn" data-copy='from stateweave.adapters.base import StateWeaveAdapter
+from stateweave.schema.v1 import StateWeavePayload, AgentInfo
+
+class MyFrameworkAdapter(StateWeaveAdapter):
+    @property
+    def framework_name(self) -> str:
+        return "my-framework"
+
+    def export_state(self, agent_id: str, **kwargs) -> StateWeavePayload:
+        ...
+
+    def import_state(self, payload: StateWeavePayload, **kwargs):
+        ...
+
+    def list_agents(self) -> list[AgentInfo]:
+        ...' aria-label="Copy code">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            </button>
+          </div>
+<pre><code><span class="kw">from</span> <span class="mod">stateweave.adapters.base</span> <span class="kw">import</span> <span class="cls">StateWeaveAdapter</span>
+<span class="kw">from</span> <span class="mod">stateweave.schema.v1</span> <span class="kw">import</span> <span class="cls">StateWeavePayload</span>, <span class="cls">AgentInfo</span>
+
+<span class="kw">class</span> <span class="cls">MyFrameworkAdapter</span>(<span class="cls">StateWeaveAdapter</span>):
+    <span class="cmt">@property</span>
+    <span class="kw">def</span> <span class="fn">framework_name</span>(<span class="var">self</span>) -> <span class="cls">str</span>:
+        <span class="kw">return</span> <span class="str">"my-framework"</span>
+
+    <span class="kw">def</span> <span class="fn">export_state</span>(<span class="var">self</span>, agent_id: <span class="cls">str</span>, **kwargs) -> <span class="cls">StateWeavePayload</span>:
+        <span class="cmt"># Framework state → Universal Schema</span>
+        ...
+
+    <span class="kw">def</span> <span class="fn">import_state</span>(<span class="var">self</span>, payload: <span class="cls">StateWeavePayload</span>, **kwargs):
+        <span class="cmt"># Universal Schema → framework state</span>
+        ...
+
+    <span class="kw">def</span> <span class="fn">list_agents</span>(<span class="var">self</span>) -> <span class="cls">list</span>[<span class="cls">AgentInfo</span>]:
+        <span class="cmt"># Return discoverable agents</span>
+        ...</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════ FAQ ══════ -->
+    <section class="section" id="faq" aria-label="Frequently asked questions">
+      <div class="container">
+        <div class="section-header reveal">
+          <span class="section-label">FAQ</span>
+          <h2>Common questions</h2>
+        </div>
+
+        <div class="faq-list reveal">
+          <div class="faq-item">
+            <button class="faq-question">
+              How do I migrate agent state between frameworks?
+              <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                Install with <code>pip install stateweave</code>. Use the source framework's adapter to <code>export_state()</code>, then the target framework's adapter to <code>import_state()</code>. All cognitive state — conversation history, working memory, goals, tool results — transfers through the Universal Schema.
+              </div>
+            </div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-question">
+              What happens to non-portable state?
+              <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                StateWeave never silently drops data. Non-portable elements (database connections, credentials, framework internals) are stripped and documented in <code>non_portable_warnings</code> with severity, reason, and remediation guidance.
+              </div>
+            </div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-question">
+              Is state encrypted during transport?
+              <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                Yes. AES-256-GCM authenticated encryption with PBKDF2 key derivation (600K iterations). Each operation gets a unique nonce. Ciphertext is bound to agent metadata via associated data.
+              </div>
+            </div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-question">
+              How do I add support for a new framework?
+              <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                Subclass <code>StateWeaveAdapter</code> and implement <code>framework_name</code>, <code>export_state</code>, <code>import_state</code>, and <code>list_agents</code>. That's it — your framework gets instant migration paths to every existing adapter through the star topology.
+              </div>
+            </div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-question">
+              Does it work as an MCP Server?
+              <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                Yes. StateWeave ships as an MCP Server with three tools: <code>export_agent_state</code>, <code>import_agent_state</code>, and <code>diff_agent_states</code>. Any MCP-compatible AI assistant can use StateWeave directly.
+              </div>
+            </div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-question">
+              What's the license?
+              <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                Apache 2.0. Use it, modify it, ship it. Includes a patent shield and retaliation clause. Every component — adapters, serializer, encryption, diff engine, MCP server — is open source.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════ CTA ══════ -->
+    <section class="section section-alt" id="cta" aria-label="Call to action">
+      <div class="container">
+        <div class="cta-banner reveal">
+          <h3>Build a new adapter</h3>
+          <p>Every adapter you build gives every other adapter instant portability to your framework. One adapter, N connections.</p>
+          <a href="https://github.com/GDWN-BLDR/stateweave" target="_blank" rel="noopener" class="btn btn-gradient">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+            Contribute on GitHub
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ══════ FOOTER ══════ -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <div class="footer-logo">
+            <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
+              <path d="M16 2L4 9v14l12 7 12-7V9L16 2z" stroke="url(#ft-grad)" stroke-width="2" fill="none"/>
+              <circle cx="16" cy="16" r="3" fill="url(#ft-grad)"/>
+              <defs><linearGradient id="ft-grad" x1="4" y1="2" x2="28" y2="30"><stop stop-color="#7c3aed"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs>
+            </svg>
+            StateWeave
+          </div>
+          <p class="footer-tagline">Your agent's memories shouldn't be locked to one framework.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Install</h4>
+          <ul>
+            <li><a href="https://pypi.org/project/stateweave/" target="_blank" rel="noopener">PyPI</a></li>
+            <li><a href="https://github.com/GDWN-BLDR/stateweave" target="_blank" rel="noopener">GitHub</a></li>
+            <li><a href="https://github.com/GDWN-BLDR/stateweave/blob/main/LICENSE" target="_blank" rel="noopener">Apache 2.0</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Learn</h4>
+          <ul>
+            <li><a href="#demo">Quick Start</a></li>
+            <li><a href="https://github.com/GDWN-BLDR/stateweave#readme" target="_blank" rel="noopener">Docs</a></li>
+            <li><a href="#schema">Schema</a></li>
+            <li><a href="#adapter">Build Adapter</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Community</h4>
+          <ul>
+            <li><a href="https://github.com/GDWN-BLDR/stateweave/issues" target="_blank" rel="noopener">Issues</a></li>
+            <li><a href="https://github.com/GDWN-BLDR/stateweave/discussions" target="_blank" rel="noopener">Discussions</a></li>
+            <li><a href="https://github.com/GDWN-BLDR/stateweave/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span class="footer-install">pip install stateweave</span>
+        <span class="footer-copy">A <a href="https://pantollventures.com" target="_blank" rel="noopener" style="color:#D4A574;text-decoration:none;">Pantoll Ventures</a> product · © 2026 · Apache 2.0</span>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
