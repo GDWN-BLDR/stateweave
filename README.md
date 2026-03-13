@@ -74,6 +74,17 @@ mcp_adapter.import_state(payload)
 # The agent resumes with its memories intact
 ```
 
+### Auto-Checkpoint Middleware
+
+```python
+from stateweave.middleware import auto_checkpoint
+
+@auto_checkpoint(every_n_steps=5)
+def run_agent(payload):
+    # Your agent logic here — StateWeave checkpoints automatically
+    return payload
+```
+
 ### Migrate with Encryption
 
 ```python
@@ -358,6 +369,9 @@ stateweave checkpoint state.json --label "before-experiment"
 stateweave history my-agent
 stateweave rollback my-agent 3 -o restored.json
 
+# Run diagnostic health checks
+stateweave doctor
+
 # List all available adapters
 stateweave adapters
 
@@ -413,12 +427,24 @@ python scripts/uce.py
 ```
 stateweave/
 ├── schema/        # Universal Schema (Pydantic models)
-├── core/          # Engine (serializer, encryption, diff, delta, timetravel, environment)
+├── core/          # Engine (serializer, encryption, diff, delta, timetravel, environment, doctor)
 ├── adapters/      # Framework adapters (10 frameworks)
 ├── a2a/           # A2A protocol bridge
+├── middleware/    # Auto-checkpoint middleware
+├── playground/    # Interactive playground (REST API + UI)
+├── registry/      # Schema registry (publish, search, discover)
+├── templates/     # Project scaffolding (create-stateweave-agent)
 ├── mcp_server/    # MCP Server implementation
 └── compliance/    # UCE scanners
 ```
+
+### Additional Tools
+
+| Tool | Description |
+|------|-------------|
+| **VS Code Extension** | Payload preview, diff, doctor, adapter scaffold — `vscode-extension/` |
+| **TypeScript SDK** | Universal Schema types, serializer, diff — `sdk/typescript/` |
+| **GitHub Action** | CI validation + PR diffs — `action.yml` |
 
 ## License
 

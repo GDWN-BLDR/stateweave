@@ -162,7 +162,13 @@ def main():
         print(json.dumps(scorecard, indent=2))
 
     # Exit code
-    if args.mode == "CI" or True:  # Always enforce exit codes
+    if args.mode == "CI":
+        # CI mode: only fail on BLOCK violations
+        if scorecard.get("block_failures", 0) > 0:
+            sys.exit(1)
+        sys.exit(0)
+    else:
+        # Local mode: fail on any violations (BLOCK or WARN)
         if not scorecard.get("overall_pass", False):
             sys.exit(1)
         sys.exit(0)
