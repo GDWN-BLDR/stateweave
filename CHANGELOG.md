@@ -14,9 +14,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Schema: PayloadSignature** — New `PayloadSignature` model and optional `signature` field on `StateWeavePayload` (schema v0.2.0, additive).
 - **Delta State Transport** — `stateweave/core/delta.py` enables sending only state differences instead of full payloads. `create_delta()` and `apply_delta()` with hash verification.
 - **State Merge Engine (CRDT Foundation)** — `stateweave/core/merge.py` with `merge_payloads()` and three conflict resolution policies: Last-Writer-Wins, Union, Manual.
-- **Integration tests** — DSPy → MCP and OpenAI Agents → LangGraph migration paths
-- **Signed migration integration test** — Full sign → encrypt → decrypt → verify → import pipeline
-- **61 new tests** — total 315 (up from 254)
+- **Agent Time Travel** — `stateweave/core/timetravel.py` with `CheckpointStore` for versioning, rollback, branching, diffing. Content-addressable storage (SHA-256), parent hash chains, delta compression.
+- **A2A Bridge** — `stateweave/a2a/bridge.py` integrates StateWeave as the state layer for Google's Agent2Agent protocol. TaskArtifact adapter, AgentCard capabilities, handoff tasks.
+- **Auto-Detection + Live Connectors** — `stateweave/core/environment.py` scans installed frameworks and auto-selects the best adapter.
+- **`stateweave doctor`** — Diagnostic health checks (Python, version, frameworks, checkpoint store, encryption, serialization safety, dependencies).
+- **Auto-Checkpoint Middleware** — `stateweave/middleware/auto_checkpoint.py` with `CheckpointMiddleware` class and `@auto_checkpoint` decorator for invisible state versioning.
+- **GitHub Action** — `action.yml` composite action for CI validation of `.stateweave.json` files and PR diff generation.
+- **create-stateweave-agent** — `stateweave/templates/create_agent.py` scaffolds new agent projects with StateWeave pre-wired.
+- **Interactive Playground** — `stateweave/playground/api.py` REST API (translate, diff, checkpoint, validate, doctor, info) with self-contained dark-theme UI.
+- **Schema Registry** — `stateweave/registry/client.py` local-first registry for publishing, discovering, and reusing StateWeave payload schemas with text + tag search.
+- **VS Code Extension** — `vscode-extension/` with 5 commands (validate, diff, doctor, generate-adapter, preview), status bar, and payload preview dashboard.
+- **TypeScript SDK** — `sdk/typescript/src/index.ts` with full Universal Schema type definitions, `StateWeaveSerializer`, `diffPayloads()`, `createPayload()`, and `StateWeaveAdapter` interface.
+- **CLI**: 15 commands total (added `scan`, `checkpoint`, `history`, `rollback`, `doctor`)
+- **100 new tests** — total 415+ (up from 315)
 
 ### Changed
 
