@@ -44,14 +44,18 @@ async def export_agent_state(
 ) -> Dict[str, Any]:
     """Export an agent's cognitive state from a framework.
 
+    Use this when an agent needs to save its state before shutting down,
+    migrate to a different framework, create a backup before a risky
+    operation, or share its learned context with another agent.
+
     Extracts the agent's full cognitive state (conversation history,
     working memory, goals, tool results) and packages it in the
     Universal Schema format.
 
     Args:
-        framework: Source framework name ("langgraph", "mcp").
+        framework: Source framework name ("langgraph", "mcp", "crewai", "autogen").
         agent_id: Identifier of the agent to export.
-        encrypt: Whether to encrypt the exported payload.
+        encrypt: Whether to encrypt the exported payload (AES-256-GCM).
 
     Returns:
         Dict containing the exported StateWeavePayload as JSON,
@@ -104,11 +108,15 @@ async def import_agent_state(
 ) -> Dict[str, Any]:
     """Import an agent's cognitive state into a target framework.
 
+    Use this when an agent needs to resume in a different framework,
+    restore from a backup, or receive context from another agent.
+    The payload is validated against the Universal Schema before import.
+
     Takes a StateWeavePayload (in Universal Schema format) and
     translates it into the target framework's native representation.
 
     Args:
-        target_framework: Target framework name ("langgraph", "mcp").
+        target_framework: Target framework name ("langgraph", "mcp", "crewai", "autogen").
         payload: The StateWeavePayload as a JSON dict.
         agent_id: Optional override for the target agent ID.
 
@@ -171,6 +179,10 @@ async def diff_agent_states(
     state_b: Dict[str, Any],
 ) -> Dict[str, Any]:
     """Compare two agent states and return a detailed diff report.
+
+    Use this when you need to verify a migration succeeded, audit what
+    changed between two checkpoints, or detect state drift after an
+    operation. Shows exactly what was added, removed, or modified.
 
     Computes the structural differences between two StateWeavePayloads,
     showing what changed in conversation history, working memory,

@@ -40,6 +40,24 @@ Every time you move an agent between frameworks, you lose everything it learned.
 
 **Star topology, not mesh.** N adapters, not N² translation pairs. Adding a new framework = one adapter, instant compatibility with everything else.
 
+### See it working
+
+```
+$ python examples/quickstart.py
+
+Exported: 2 messages
+Framework: langgraph
+
+Imported into MCP ✅
+MCP has: 2 messages
+
+Diff: 15 changes (framework tag + timestamps)
+
+Done! The agent's memories migrated successfully. 🧶
+```
+
+See the full [Cloud-to-Local Sandbox Escape](examples/sandbox_escape/) demo for a more advanced scenario.
+
 ## Quick Start
 
 ### Install
@@ -404,6 +422,22 @@ python scripts/uce.py
 python scripts/uce.py --mode=CI --json
 ```
 
+## Why Not Just Serialize to JSON Yourself?
+
+You could — and it'll work for one framework. Here's what you'd have to build:
+
+| Problem | DIY JSON | StateWeave |
+|---------|----------|------------|
+| Map LangGraph's `messages[]` to CrewAI's `task_output` | Write it yourself for each pair | Handled by adapters |
+| Detect credentials in state (API keys, OAuth tokens) | Easy to miss → leaked secrets | Auto-stripped with warnings |
+| Validate state structure after migration | Write your own schema checks | Pydantic models + UCE scanners |
+| Track what was lost during migration | Hope you remember | `non_portable_warnings[]` |
+| Encrypt state for transport | DIY crypto (dangerous) | AES-256-GCM + Ed25519 |
+| Roll back if migration goes wrong | No undo | `CheckpointStore.rollback()` |
+| Support 10 frameworks | 90 translation pairs (N²) | 10 adapters (N) |
+
+StateWeave exists because the translation layer between frameworks is boring, error-prone work that every team rebuilds. We built it once.
+
 ## Contributing
 
 We welcome contributions! The highest-impact way to contribute is **building a new framework adapter**. See [Building a Custom Adapter](#building-a-custom-adapter) above.
@@ -445,6 +479,16 @@ stateweave/
 | **VS Code Extension** | Payload preview, diff, doctor, adapter scaffold — `vscode-extension/` |
 | **TypeScript SDK** | Universal Schema types, serializer, diff — `sdk/typescript/` |
 | **GitHub Action** | CI validation + PR diffs — `action.yml` |
+
+## Using StateWeave?
+
+Add the badge to your project's README:
+
+```markdown
+[![StateWeave](https://img.shields.io/badge/state-StateWeave-7c3aed)](https://github.com/GDWN-BLDR/stateweave)
+```
+
+[![StateWeave](https://img.shields.io/badge/state-StateWeave-7c3aed)](https://github.com/GDWN-BLDR/stateweave)
 
 ## License
 
