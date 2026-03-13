@@ -82,10 +82,10 @@ class PlaygroundAPI:
         result = diff_payloads(payload_a, payload_b)
         return {
             "report": result.to_report(),
-            "total_changes": result.total_changes,
-            "additions": result.additions,
-            "deletions": result.deletions,
-            "modifications": result.modifications,
+            "total_changes": result.added_count + result.removed_count + result.modified_count,
+            "additions": result.added_count,
+            "deletions": result.removed_count,
+            "modifications": result.modified_count,
         }
 
     def checkpoint(self, payload_dict: Dict, label: str = "") -> Dict[str, Any]:

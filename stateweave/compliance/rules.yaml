@@ -113,7 +113,7 @@ import_discipline:
       may_import: []
     core:
       path: "stateweave/core"
-      may_import: ["stateweave.schema"]
+      may_import: ["stateweave.schema", "stateweave.adapters"]
     adapters:
       path: "stateweave/adapters"
       may_import: ["stateweave.schema", "stateweave.core"]

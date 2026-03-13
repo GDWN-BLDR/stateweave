@@ -18,7 +18,7 @@ Usage:
 
 import json
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -101,11 +101,13 @@ class RegistryClient:
         self._schemas_dir.mkdir(parents=True, exist_ok=True)
 
         from stateweave.core.delta import compute_payload_hash
+
         schema_hash = compute_payload_hash(payload)
 
         entry = RegistryEntry(
             name=name,
-            description=description or f"Schema for {payload.source_framework} agent '{payload.metadata.agent_id}'",
+            description=description
+            or (f"Schema for {payload.source_framework} agent '{payload.metadata.agent_id}'"),
             framework=payload.source_framework,
             version=payload.stateweave_version,
             tags=tags or [],
