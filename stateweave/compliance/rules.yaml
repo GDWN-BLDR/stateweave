@@ -1,0 +1,175 @@
+# STATEWEAVE Universal Compliance Engine — Rules Manifesto
+# ========================================================
+# This file is the constitution. All scanner behavior is driven by this config.
+# Board-ratified 2026-03-13.
+
+global:
+  mode: STRICT
+  ignore_paths:
+    - ".git"
+    - "__pycache__"
+    - ".pytest_cache"
+    - ".mypy_cache"
+    - "node_modules"
+    - ".eggs"
+    - "*.egg-info"
+    - "dist"
+    - "build"
+    - "research"
+    - "board"
+
+# ============================================================
+# LAW 2: ONE Schema Version
+# ============================================================
+schema_integrity:
+  enabled: true
+  mode: BLOCK
+  description: "Validates that all schema models conform to the published spec"
+  schema_module: "stateweave.schema.v1"
+  required_fields:
+    - "stateweave_version"
+    - "source_framework"
+    - "exported_at"
+    - "cognitive_state"
+    - "metadata"
+
+# ============================================================
+# LAW 4: ONE Adapter Contract
+# ============================================================
+adapter_contract:
+  enabled: true
+  mode: BLOCK
+  description: "Ensures all adapters extend StateWeaveAdapter ABC"
+  adapters_dir: "stateweave/adapters"
+  base_class: "StateWeaveAdapter"
+  required_methods:
+    - "export_state"
+    - "import_state"
+    - "list_agents"
+  required_properties:
+    - "framework_name"
+
+# ============================================================
+# LAW 3: ONE Serialization Path
+# ============================================================
+serialization_safety:
+  enabled: true
+  mode: BLOCK
+  description: "Detects side-channel serialization bypassing StateWeaveSerializer"
+  forbidden_patterns:
+    - "pickle.dumps"
+    - "pickle.dump"
+    - "pickle.loads"
+    - "pickle.load"
+    - "msgpack.packb"
+    - "msgpack.unpackb"
+  allowed_in:
+    - "stateweave/core/serializer.py"
+    - "tests/"
+  scan_paths:
+    - "stateweave/"
+
+# ============================================================
+# LAW 5: ONE Encryption Path
+# ============================================================
+encryption_compliance:
+  enabled: true
+  mode: BLOCK
+  description: "Ensures all encryption goes through EncryptionFacade"
+  forbidden_patterns:
+    - "Fernet("
+    - "AESGCM("
+    - "Cipher("
+    - "PBKDF2HMAC("
+  allowed_in:
+    - "stateweave/core/encryption.py"
+    - "tests/"
+  scan_paths:
+    - "stateweave/"
+
+# ============================================================
+# MCP Protocol Compliance
+# ============================================================
+mcp_protocol:
+  enabled: true
+  mode: BLOCK
+  description: "Validates MCP server implementation follows protocol spec"
+  server_dir: "stateweave/mcp_server"
+  required_tool_names:
+    - "export_agent_state"
+    - "import_agent_state"
+    - "diff_agent_states"
+
+# ============================================================
+# LAW 7: ONE Import Discipline
+# ============================================================
+import_discipline:
+  enabled: true
+  mode: BLOCK
+  description: "Enforces layered import hierarchy"
+  layers:
+    schema:
+      path: "stateweave/schema"
+      may_import: []
+    core:
+      path: "stateweave/core"
+      may_import: ["stateweave.schema"]
+    adapters:
+      path: "stateweave/adapters"
+      may_import: ["stateweave.schema", "stateweave.core"]
+    mcp_server:
+      path: "stateweave/mcp_server"
+      may_import: ["stateweave.schema", "stateweave.core", "stateweave.adapters"]
+    compliance:
+      path: "stateweave/compliance"
+      may_import: []
+
+# ============================================================
+# LAW 1: ONE Logger Convention
+# ============================================================
+logger_naming:
+  enabled: true
+  mode: BLOCK
+  description: "Enforces stateweave.* logger naming convention"
+  required_prefix: "stateweave."
+  scan_paths:
+    - "stateweave/"
+  ignore_files:
+    - "__init__.py"
+
+# ============================================================
+# LAW 8: ONE Test Discipline
+# ============================================================
+test_coverage_gate:
+  enabled: true
+  mode: BLOCK
+  description: "Enforces minimum test file coverage"
+  test_dir: "tests"
+  source_dir: "stateweave"
+  minimum_test_ratio: 0.5
+  excluded_dirs:
+    - "compliance/scanners"
+    - "__pycache__"
+
+# ============================================================
+# File Architecture (orphan detection)
+# ============================================================
+file_architecture:
+  enabled: true
+  mode: WARN
+  description: "Detects orphan files not registered in MANIFEST"
+  manifest_path: "board/MANIFEST.md"
+  scan_paths:
+    - "stateweave/"
+    - "scripts/"
+
+# ============================================================
+# Dependency Cycles
+# ============================================================
+dependency_cycles:
+  enabled: true
+  mode: BLOCK
+  description: "Detects circular import dependencies"
+  scan_paths:
+    - "stateweave/"
+  max_depth: 10

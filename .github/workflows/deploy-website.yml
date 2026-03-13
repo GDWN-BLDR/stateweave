@@ -1,0 +1,70 @@
+name: Deploy Website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'website/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        working-directory: website
+        run: npm ci
+
+      - name: Build redirect page
+        run: |
+          mkdir -p redirect
+          cat > redirect/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Redirecting to StateWeave…</title>
+            <meta http-equiv="refresh" content="0;url=https://stateweave.pantollventures.com/">
+            <link rel="canonical" href="https://stateweave.pantollventures.com/">
+          </head>
+          <body>
+            <p>Redirecting to <a href="https://stateweave.pantollventures.com/">stateweave.pantollventures.com</a>…</p>
+          </body>
+          </html>
+          EOF
+          cp redirect/index.html redirect/404.html
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: redirect
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

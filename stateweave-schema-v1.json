@@ -1,0 +1,556 @@
+{
+  "$defs": {
+    "AccessPolicy": {
+      "description": "Access policies for state payloads.",
+      "enum": [
+        "private",
+        "shared",
+        "public",
+        "restricted"
+      ],
+      "title": "AccessPolicy",
+      "type": "string"
+    },
+    "AgentMetadata": {
+      "description": "Metadata about the agent whose state is being transferred.",
+      "properties": {
+        "agent_id": {
+          "title": "Agent Id",
+          "type": "string"
+        },
+        "agent_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Agent Name"
+        },
+        "owner": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Owner"
+        },
+        "namespace": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Namespace"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tags",
+          "type": "array"
+        },
+        "access_policy": {
+          "$ref": "#/$defs/AccessPolicy",
+          "default": "private"
+        },
+        "framework_capabilities": {
+          "title": "Framework Capabilities",
+          "type": "object"
+        },
+        "custom_metadata": {
+          "title": "Custom Metadata",
+          "type": "object"
+        }
+      },
+      "required": [
+        "agent_id"
+      ],
+      "title": "AgentMetadata",
+      "type": "object"
+    },
+    "AuditAction": {
+      "description": "Types of audit trail actions.",
+      "enum": [
+        "export",
+        "import",
+        "migrate",
+        "encrypt",
+        "decrypt",
+        "validate",
+        "diff",
+        "tool_call",
+        "state_update"
+      ],
+      "title": "AuditAction",
+      "type": "string"
+    },
+    "AuditEntry": {
+      "description": "A single entry in the audit trail.",
+      "properties": {
+        "timestamp": {
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "action": {
+          "$ref": "#/$defs/AuditAction"
+        },
+        "agent": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Agent"
+        },
+        "framework": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Framework"
+        },
+        "success": {
+          "default": true,
+          "title": "Success",
+          "type": "boolean"
+        },
+        "details": {
+          "title": "Details",
+          "type": "object"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        }
+      },
+      "required": [
+        "action"
+      ],
+      "title": "AuditEntry",
+      "type": "object"
+    },
+    "CognitiveState": {
+      "description": "The core cognitive state of an AI agent.\n\nThis represents everything the agent \"knows\" and \"thinks\" \u2014\nthe accumulated knowledge, reasoning state, and decision context.",
+      "properties": {
+        "conversation_history": {
+          "items": {
+            "$ref": "#/$defs/Message"
+          },
+          "title": "Conversation History",
+          "type": "array"
+        },
+        "working_memory": {
+          "title": "Working Memory",
+          "type": "object"
+        },
+        "goal_tree": {
+          "additionalProperties": {
+            "$ref": "#/$defs/GoalNode"
+          },
+          "title": "Goal Tree",
+          "type": "object"
+        },
+        "tool_results_cache": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ToolResult"
+          },
+          "title": "Tool Results Cache",
+          "type": "object"
+        },
+        "trust_parameters": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Trust Parameters",
+          "type": "object"
+        },
+        "long_term_memory": {
+          "title": "Long Term Memory",
+          "type": "object"
+        },
+        "episodic_memory": {
+          "items": {
+            "type": "object"
+          },
+          "title": "Episodic Memory",
+          "type": "array"
+        }
+      },
+      "title": "CognitiveState",
+      "type": "object"
+    },
+    "EncryptionInfo": {
+      "description": "Metadata about encryption applied to the payload.",
+      "properties": {
+        "algorithm": {
+          "default": "AES-256-GCM",
+          "title": "Algorithm",
+          "type": "string"
+        },
+        "key_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Key Id"
+        },
+        "encrypted": {
+          "default": false,
+          "title": "Encrypted",
+          "type": "boolean"
+        },
+        "nonce": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Nonce"
+        }
+      },
+      "title": "EncryptionInfo",
+      "type": "object"
+    },
+    "GoalNode": {
+      "description": "A node in the agent's goal tree.",
+      "properties": {
+        "goal_id": {
+          "title": "Goal Id",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "status": {
+          "default": "pending",
+          "title": "Status",
+          "type": "string"
+        },
+        "parent_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Id"
+        },
+        "children": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Children",
+          "type": "array"
+        },
+        "metadata": {
+          "title": "Metadata",
+          "type": "object"
+        }
+      },
+      "required": [
+        "goal_id",
+        "description"
+      ],
+      "title": "GoalNode",
+      "type": "object"
+    },
+    "Message": {
+      "description": "A single message in conversation history.",
+      "properties": {
+        "role": {
+          "$ref": "#/$defs/MessageRole"
+        },
+        "content": {
+          "title": "Content",
+          "type": "string"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "tool_call_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tool Call Id"
+        },
+        "metadata": {
+          "title": "Metadata",
+          "type": "object"
+        },
+        "timestamp": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timestamp"
+        }
+      },
+      "required": [
+        "role",
+        "content"
+      ],
+      "title": "Message",
+      "type": "object"
+    },
+    "MessageRole": {
+      "description": "Supported message roles across frameworks.",
+      "enum": [
+        "human",
+        "assistant",
+        "system",
+        "tool",
+        "function"
+      ],
+      "title": "MessageRole",
+      "type": "string"
+    },
+    "NonPortableWarning": {
+      "description": "Warning about state that could not be fully transferred.",
+      "properties": {
+        "field": {
+          "title": "Field",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/NonPortableWarningSeverity",
+          "default": "WARN"
+        },
+        "data_loss": {
+          "default": false,
+          "title": "Data Loss",
+          "type": "boolean"
+        },
+        "recommendation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Recommendation"
+        },
+        "original_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Original Type"
+        }
+      },
+      "required": [
+        "field",
+        "reason"
+      ],
+      "title": "NonPortableWarning",
+      "type": "object"
+    },
+    "NonPortableWarningSeverity": {
+      "description": "Severity levels for non-portable state warnings.",
+      "enum": [
+        "INFO",
+        "WARN",
+        "CRITICAL"
+      ],
+      "title": "NonPortableWarningSeverity",
+      "type": "string"
+    },
+    "ToolResult": {
+      "description": "Cached result from a tool invocation.",
+      "properties": {
+        "tool_name": {
+          "title": "Tool Name",
+          "type": "string"
+        },
+        "arguments": {
+          "title": "Arguments",
+          "type": "object"
+        },
+        "result": {
+          "default": null,
+          "title": "Result"
+        },
+        "result_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Result Hash"
+        },
+        "timestamp": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timestamp"
+        },
+        "success": {
+          "default": true,
+          "title": "Success",
+          "type": "boolean"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        }
+      },
+      "required": [
+        "tool_name"
+      ],
+      "title": "ToolResult",
+      "type": "object"
+    }
+  },
+  "description": "The Universal Schema \u2014 the canonical representation of agent cognitive state.\n\nThis is the SSOT. All adapters translate TO and FROM this format.\nDirect framework-to-framework translation is forbidden (SSOT Charter).\n\nAttributes:\n    stateweave_version: Schema version (semver). Immutable per version.\n    source_framework: The framework this state was exported from.\n    source_version: Version of the source framework.\n    exported_at: ISO-8601 timestamp of export.\n    cognitive_state: The agent's cognitive state (memories, goals, etc.).\n    metadata: Agent identification and ownership metadata.\n    audit_trail: History of operations performed on this state.\n    non_portable_warnings: Explicit list of state that couldn't transfer.\n    encryption: Encryption metadata (if payload is encrypted).",
+  "properties": {
+    "stateweave_version": {
+      "default": "0.1.0",
+      "title": "Stateweave Version",
+      "type": "string"
+    },
+    "source_framework": {
+      "title": "Source Framework",
+      "type": "string"
+    },
+    "source_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Version"
+    },
+    "exported_at": {
+      "format": "date-time",
+      "title": "Exported At",
+      "type": "string"
+    },
+    "cognitive_state": {
+      "$ref": "#/$defs/CognitiveState"
+    },
+    "metadata": {
+      "$ref": "#/$defs/AgentMetadata"
+    },
+    "audit_trail": {
+      "items": {
+        "$ref": "#/$defs/AuditEntry"
+      },
+      "title": "Audit Trail",
+      "type": "array"
+    },
+    "non_portable_warnings": {
+      "items": {
+        "$ref": "#/$defs/NonPortableWarning"
+      },
+      "title": "Non Portable Warnings",
+      "type": "array"
+    },
+    "encryption": {
+      "$ref": "#/$defs/EncryptionInfo"
+    }
+  },
+  "required": [
+    "source_framework",
+    "metadata"
+  ],
+  "title": "StateWeavePayload",
+  "type": "object"
+}

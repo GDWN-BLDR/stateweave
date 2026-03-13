@@ -1,0 +1,89 @@
+site_name: StateWeave Documentation
+site_url: https://stateweave.pantollventures.com/docs/
+site_description: Cross-framework cognitive state portability for AI agents
+site_author: Pantoll Ventures
+
+repo_url: https://github.com/GDWN-BLDR/stateweave
+repo_name: GDWN-BLDR/stateweave
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: deep purple
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: deep purple
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.top
+    - search.suggest
+    - content.code.copy
+    - content.code.annotate
+  icon:
+    repo: fontawesome/brands/github
+  font:
+    text: Inter
+    code: JetBrains Mono
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quickstart: getting-started/quickstart.md
+    - Concepts: getting-started/concepts.md
+  - Guides:
+    - Encrypted Migration: guides/encrypted-migration.md
+    - Cross-Framework Roundtrip: guides/cross-framework-roundtrip.md
+    - MCP Server Setup: guides/mcp-server.md
+    - REST API: guides/rest-api.md
+    - Building an Adapter: guides/building-adapter.md
+    - Deploy with Docker: guides/docker-deployment.md
+  - API Reference:
+    - Universal Schema: api/schema.md
+    - Adapters: api/adapters.md
+    - Serializer: api/serializer.md
+    - Encryption: api/encryption.md
+    - Diff Engine: api/diff.md
+    - Delta Transport: api/delta.md
+    - Merge Engine: api/merge.md
+    - Observability: api/observability.md
+  - Security:
+    - Overview: security/overview.md
+    - Payload Signing: security/signing.md
+    - Encryption: security/encryption.md
+  - Contributing:
+    - Development Setup: contributing/setup.md
+    - Architecture: contributing/architecture.md
+    - Compliance (UCE): contributing/uce.md
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/GDWN-BLDR/stateweave
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/stateweave/

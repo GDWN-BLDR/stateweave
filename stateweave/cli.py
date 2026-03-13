@@ -1,0 +1,335 @@
+"""
+StateWeave CLI — Command-line interface for state operations.
+===============================================================
+Provides export, import, diff, and version commands.
+
+Usage:
+    stateweave version
+    stateweave export --framework langgraph --agent-id my-agent [--encrypt]
+    stateweave import --framework mcp --payload state.json
+    stateweave diff state_a.json state_b.json
+"""
+
+import argparse
+import json
+import logging
+import sys
+
+import stateweave
+from stateweave.adapters import ADAPTER_REGISTRY
+from stateweave.core.detect import detect_framework
+from stateweave.core.diff import diff_payloads
+from stateweave.core.encryption import EncryptionFacade
+from stateweave.core.migration import MigrationEngine
+from stateweave.core.serializer import StateWeaveSerializer
+
+logger = logging.getLogger("stateweave.cli")
+
+ADAPTERS = ADAPTER_REGISTRY
+
+
+def cmd_version(args):
+    """Print version information."""
+    print(f"stateweave {stateweave.__version__}")
+    print(f"Python {sys.version}")
+    print(f"Adapters: {', '.join(ADAPTERS.keys())}")
+
+
+def cmd_export(args):
+    """Export agent state to a JSON file."""
+    if args.framework not in ADAPTERS:
+        print(f"Error: Unknown framework '{args.framework}'", file=sys.stderr)
+        print(f"Available: {', '.join(ADAPTERS.keys())}", file=sys.stderr)
+        sys.exit(1)
+
+    adapter = ADAPTERS[args.framework]()
+    serializer = StateWeaveSerializer(pretty=True)
+
+    encryption = None
+    if args.encrypt:
+        passphrase = args.passphrase or input("Enter encryption passphrase: ")
+        encryption = EncryptionFacade.from_passphrase(passphrase)
+
+    engine = MigrationEngine(serializer=serializer, encryption=encryption)
+
+    try:
+        result = engine.export_state(
+            adapter=adapter,
+            agent_id=args.agent_id,
+            encrypt=args.encrypt,
+        )
+    except Exception as e:
+        print(f"Export failed: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    if not result.success:
+        print(f"Export failed: {result.error}", file=sys.stderr)
+        sys.exit(1)
+
+    payload_dict = serializer.to_dict(result.payload)
+
+    if args.output:
+        with open(args.output, "w") as f:
+            json.dump(payload_dict, f, indent=2, default=str)
+        print(f"Exported to {args.output}")
+    else:
+        print(json.dumps(payload_dict, indent=2, default=str))
+
+    # Print warnings
+    if result.payload.non_portable_warnings:
+        print(
+            f"\n⚠️  {len(result.payload.non_portable_warnings)} non-portable warnings:",
+            file=sys.stderr,
+        )
+        for w in result.payload.non_portable_warnings:
+            print(f"  [{w.severity.value}] {w.field}: {w.reason}", file=sys.stderr)
+
+
+def cmd_import(args):
+    """Import agent state from a JSON file."""
+    if args.framework not in ADAPTERS:
+        print(f"Error: Unknown framework '{args.framework}'", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        with open(args.payload, "r") as f:
+            payload_dict = json.load(f)
+    except FileNotFoundError:
+        print(f"Error: File not found: {args.payload}", file=sys.stderr)
+        sys.exit(1)
+
+    adapter = ADAPTERS[args.framework]()
+    serializer = StateWeaveSerializer()
+    engine = MigrationEngine(serializer=serializer)
+
+    payload = serializer.from_dict(payload_dict)
+
+    kwargs = {}
+    if args.agent_id:
+        kwargs["agent_id"] = args.agent_id
+
+    try:
+        result = engine.import_state(adapter=adapter, payload=payload, **kwargs)
+    except Exception as e:
+        print(f"Import failed: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    if result.success:
+        print(f"✅ Successfully imported into {args.framework}")
+        print(f"   Messages: {len(payload.cognitive_state.conversation_history)}")
+        print(f"   Working memory keys: {len(payload.cognitive_state.working_memory)}")
+    else:
+        print(f"Import failed: {result.error}", file=sys.stderr)
+        sys.exit(1)
+
+
+def cmd_diff(args):
+    """Diff two state files."""
+    serializer = StateWeaveSerializer()
+
+    try:
+        with open(args.state_a, "r") as f:
+            dict_a = json.load(f)
+        with open(args.state_b, "r") as f:
+            dict_b = json.load(f)
+    except FileNotFoundError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    payload_a = serializer.from_dict(dict_a)
+    payload_b = serializer.from_dict(dict_b)
+
+    diff = diff_payloads(payload_a, payload_b)
+    print(diff.to_report())
+
+
+def cmd_validate(args):
+    """Validate a StateWeavePayload JSON file."""
+    serializer = StateWeaveSerializer()
+
+    try:
+        with open(args.payload, "r") as f:
+            payload_dict = json.load(f)
+    except FileNotFoundError:
+        print(f"Error: File not found: {args.payload}", file=sys.stderr)
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        print(f"❌ Invalid JSON: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    from stateweave.schema.validator import validate_payload
+
+    is_valid, errors = validate_payload(payload_dict)
+
+    if is_valid:
+        payload = serializer.from_dict(payload_dict)
+        print("✅ Valid StateWeavePayload")
+        print(f"   Version: {payload.stateweave_version}")
+        print(f"   Framework: {payload.source_framework}")
+        print(f"   Agent: {payload.metadata.agent_id}")
+        print(f"   Messages: {len(payload.cognitive_state.conversation_history)}")
+        print(f"   Working memory keys: {len(payload.cognitive_state.working_memory)}")
+        if payload.non_portable_warnings:
+            print(f"   ⚠️  Warnings: {len(payload.non_portable_warnings)}")
+    else:
+        print("❌ Invalid payload:", file=sys.stderr)
+        for err in errors:
+            print(f"   • {err}", file=sys.stderr)
+        sys.exit(1)
+
+
+def cmd_schema(args):
+    """Dump the Universal Schema as JSON Schema."""
+    from stateweave.schema.validator import get_schema_json
+
+    schema = get_schema_json()
+
+    if args.output:
+        with open(args.output, "w") as f:
+            json.dump(schema, f, indent=2)
+        print(f"Schema written to {args.output}")
+    else:
+        print(json.dumps(schema, indent=2))
+
+
+def cmd_detect(args):
+    """Auto-detect the source framework of a state file."""
+    results = detect_framework(args.input_file, top_n=5)
+
+    print("Framework Detection Results:")
+    print("─" * 40)
+    for framework, confidence in results:
+        bar = "█" * int(confidence * 20) + "░" * (20 - int(confidence * 20))
+        print(f"  {framework:<20} {bar} {confidence:.0%}")
+
+    if results:
+        best = results[0]
+        print(f"\n✓ Best match: {best[0]} ({best[1]:.0%} confidence)")
+
+
+def cmd_adapters(args):
+    """List all available framework adapters."""
+    print("Available Framework Adapters:")
+    print("─" * 50)
+    for name, cls in sorted(ADAPTERS.items()):
+        print(f"  {name:<20} {cls.__name__}")
+    print(f"\nTotal: {len(ADAPTERS)} adapters")
+
+
+def cmd_generate_adapter(args):
+    """Generate a scaffold for a new framework adapter."""
+    from stateweave.core.generator import generate_adapter_scaffold
+
+    result = generate_adapter_scaffold(
+        args.framework_name,
+        output_dir=args.output_dir,
+    )
+
+    print(f"✓ Generated adapter scaffold for '{args.framework_name}':")
+    for path in result["files"]:
+        print(f"  → {path}")
+
+
+def main():
+    """Main CLI entry point."""
+    parser = argparse.ArgumentParser(
+        prog="stateweave",
+        description="🧶 StateWeave — Cross-framework cognitive state serializer",
+        epilog=(
+            "Examples:\n"
+            "  stateweave version\n"
+            "  stateweave schema -o schema.json\n"
+            "  stateweave validate state.json\n"
+            "  stateweave export -f langgraph -a my-agent -o state.json\n"
+            "  stateweave import -f mcp --payload state.json\n"
+            "  stateweave diff before.json after.json\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    # version
+    subparsers.add_parser("version", help="Show version information")
+
+    # schema
+    schema_parser = subparsers.add_parser("schema", help="Dump the Universal Schema as JSON Schema")
+    schema_parser.add_argument("--output", "-o", help="Output file (default: stdout)")
+
+    # validate
+    validate_parser = subparsers.add_parser(
+        "validate", help="Validate a StateWeavePayload JSON file"
+    )
+    validate_parser.add_argument("payload", help="Path to StateWeavePayload JSON file")
+
+    # export
+    export_parser = subparsers.add_parser("export", help="Export agent state")
+    export_parser.add_argument(
+        "--framework",
+        "-f",
+        required=True,
+        help="Source framework (langgraph, mcp, crewai, autogen)",
+    )
+    export_parser.add_argument("--agent-id", "-a", required=True, help="Agent identifier")
+    export_parser.add_argument("--output", "-o", help="Output file (default: stdout)")
+    export_parser.add_argument("--encrypt", "-e", action="store_true", help="Encrypt output")
+    export_parser.add_argument("--passphrase", "-p", help="Encryption passphrase")
+
+    # import
+    import_parser = subparsers.add_parser("import", help="Import agent state")
+    import_parser.add_argument(
+        "--framework",
+        "-f",
+        required=True,
+        help="Target framework (langgraph, mcp, crewai, autogen)",
+    )
+    import_parser.add_argument("--payload", required=True, help="StateWeavePayload JSON file")
+    import_parser.add_argument("--agent-id", "-a", help="Override target agent ID")
+
+    # diff
+    diff_parser = subparsers.add_parser("diff", help="Diff two states")
+    diff_parser.add_argument("state_a", help="First state JSON file")
+    diff_parser.add_argument("state_b", help="Second state JSON file")
+
+    # detect
+    detect_parser = subparsers.add_parser(
+        "detect", help="Auto-detect the source framework of a state file"
+    )
+    detect_parser.add_argument("input_file", help="State file to analyze")
+
+    # adapters
+    subparsers.add_parser("adapters", help="List all available framework adapters")
+
+    # generate-adapter
+    gen_parser = subparsers.add_parser(
+        "generate-adapter", help="Generate scaffold for a new framework adapter"
+    )
+    gen_parser.add_argument("framework_name", help="Name of the new framework")
+    gen_parser.add_argument("--output-dir", default=".", help="Output directory")
+
+    args = parser.parse_args()
+
+    if args.command == "version":
+        cmd_version(args)
+    elif args.command == "schema":
+        cmd_schema(args)
+    elif args.command == "validate":
+        cmd_validate(args)
+    elif args.command == "export":
+        cmd_export(args)
+    elif args.command == "import":
+        cmd_import(args)
+    elif args.command == "diff":
+        cmd_diff(args)
+    elif args.command == "detect":
+        cmd_detect(args)
+    elif args.command == "adapters":
+        cmd_adapters(args)
+    elif args.command == "generate-adapter":
+        cmd_generate_adapter(args)
+    else:
+        parser.print_help()
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
