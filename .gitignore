@@ -42,3 +42,9 @@ env/
 .env
 *.key
 *.pem
+
+# Internal docs (never commit to public repo)
+board/
+breakdown/
+research/
+content/
