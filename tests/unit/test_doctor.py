@@ -29,28 +29,38 @@ class TestDoctorReport(unittest.TestCase):
     """Test the doctor report."""
 
     def test_healthy_report(self):
-        report = DoctorReport(checks=[
-            DiagnosticCheck(name="a", status="ok", message="Good"),
-            DiagnosticCheck(name="b", status="ok", message="Also good"),
-        ])
+        report = DoctorReport(
+            checks=[
+                DiagnosticCheck(name="a", status="ok", message="Good"),
+                DiagnosticCheck(name="b", status="ok", message="Also good"),
+            ]
+        )
         self.assertTrue(report.healthy)
         self.assertEqual(report.ok_count, 2)
         self.assertEqual(report.error_count, 0)
 
     def test_unhealthy_report(self):
-        report = DoctorReport(checks=[
-            DiagnosticCheck(name="a", status="ok", message="Good"),
-            DiagnosticCheck(name="b", status="error", message="Bad"),
-        ])
+        report = DoctorReport(
+            checks=[
+                DiagnosticCheck(name="a", status="ok", message="Good"),
+                DiagnosticCheck(name="b", status="error", message="Bad"),
+            ]
+        )
         self.assertFalse(report.healthy)
         self.assertEqual(report.error_count, 1)
 
     def test_format_output(self):
-        report = DoctorReport(checks=[
-            DiagnosticCheck(name="a", status="ok", message="Python 3.11"),
-            DiagnosticCheck(name="b", status="warn", message="No frameworks",
-                          suggestion="pip install langgraph"),
-        ])
+        report = DoctorReport(
+            checks=[
+                DiagnosticCheck(name="a", status="ok", message="Python 3.11"),
+                DiagnosticCheck(
+                    name="b",
+                    status="warn",
+                    message="No frameworks",
+                    suggestion="pip install langgraph",
+                ),
+            ]
+        )
         output = report.format()
         self.assertIn("StateWeave Doctor", output)
         self.assertIn("Python 3.11", output)

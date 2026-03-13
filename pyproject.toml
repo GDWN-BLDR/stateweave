@@ -90,6 +90,8 @@ select = ["E", "F", "I", "W"]
 "stateweave/adapters/*" = ["E501"]
 "stateweave/core/*" = ["E501"]
 "stateweave/compliance/*" = ["E501", "E402"]
+"stateweave/playground/*" = ["E501"]
+"stateweave/templates/*" = ["E501"]
 "scripts/*" = ["E501", "E402"]
 
 [tool.mypy]

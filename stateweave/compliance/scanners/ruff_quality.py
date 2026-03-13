@@ -65,9 +65,7 @@ class RuffQualityScanner(BaseScanner):
         # Fall back to python -m ruff
         return [sys.executable, "-m", "ruff"]
 
-    def _run_ruff_check(
-        self, paths: list, project_root: str, mode
-    ) -> list:
+    def _run_ruff_check(self, paths: list, project_root: str, mode) -> list:
         """Run `ruff check` and parse violations."""
         violations = []
         try:
@@ -102,9 +100,7 @@ class RuffQualityScanner(BaseScanner):
 
         return violations
 
-    def _run_ruff_format_check(
-        self, paths: list, project_root: str, mode
-    ) -> list:
+    def _run_ruff_format_check(self, paths: list, project_root: str, mode) -> list:
         """Run `ruff format --check` and parse violations."""
         violations = []
         try:
@@ -117,8 +113,8 @@ class RuffQualityScanner(BaseScanner):
                 timeout=30,
             )
 
-            if result.returncode != 0 and result.stderr.strip():
-                for line in result.stderr.strip().splitlines():
+            if result.returncode != 0 and result.stdout.strip():
+                for line in result.stdout.strip().splitlines():
                     line = line.strip()
                     if line.startswith("Would reformat:"):
                         file_path = line.replace("Would reformat:", "").strip()

@@ -13,10 +13,7 @@ Usage:
 """
 
 import argparse
-import os
-import sys
 from pathlib import Path
-
 
 AGENT_TEMPLATE = '''#!/usr/bin/env python3
 """
@@ -61,10 +58,10 @@ serializer = StateWeaveSerializer(pretty=True)
 print(serializer.dumps(payload).decode())
 '''
 
-REQUIREMENTS = '''stateweave>=0.3.0
-'''
+REQUIREMENTS = """stateweave>=0.3.0
+"""
 
-CI_WORKFLOW = '''name: Agent CI
+CI_WORKFLOW = """name: Agent CI
 on: [push, pull_request]
 
 jobs:
@@ -81,9 +78,9 @@ jobs:
         with:
           validate: true
           diff-on-pr: true
-'''
+"""
 
-README_TEMPLATE = '''# {agent_name}
+README_TEMPLATE = """# {agent_name}
 
 Agent project with [StateWeave](https://github.com/GDWN-BLDR/stateweave) state portability.
 
@@ -109,7 +106,7 @@ stateweave history {agent_id}
 # Roll back to a previous state
 stateweave rollback {agent_id} 3 -o restored.json
 ```
-'''
+"""
 
 
 def create_project(
@@ -139,16 +136,23 @@ def create_project(
 
     # agent.py
     agent_path = project_dir / "agent.py"
-    agent_path.write_text(AGENT_TEMPLATE.format(
-        agent_name=name, agent_id=agent_id, framework=framework,
-    ))
+    agent_path.write_text(
+        AGENT_TEMPLATE.format(
+            agent_name=name,
+            agent_id=agent_id,
+            framework=framework,
+        )
+    )
     files["agent"] = str(agent_path)
 
     # export.py
     export_path = project_dir / "export.py"
-    export_path.write_text(EXPORT_SCRIPT.format(
-        framework=framework, agent_id=agent_id,
-    ))
+    export_path.write_text(
+        EXPORT_SCRIPT.format(
+            framework=framework,
+            agent_id=agent_id,
+        )
+    )
     files["export"] = str(export_path)
 
     # requirements.txt
@@ -163,9 +167,13 @@ def create_project(
 
     # README.md
     readme_path = project_dir / "README.md"
-    readme_path.write_text(README_TEMPLATE.format(
-        agent_name=name, agent_id=agent_id, framework=framework,
-    ))
+    readme_path.write_text(
+        README_TEMPLATE.format(
+            agent_name=name,
+            agent_id=agent_id,
+            framework=framework,
+        )
+    )
     files["readme"] = str(readme_path)
 
     return {"project_dir": str(project_dir), "files": files}
@@ -178,11 +186,15 @@ def main():
     )
     parser.add_argument("name", help="Project name")
     parser.add_argument(
-        "--framework", "-f", default="langgraph",
+        "--framework",
+        "-f",
+        default="langgraph",
         help="Target framework (default: langgraph)",
     )
     parser.add_argument(
-        "--output-dir", "-o", default=".",
+        "--output-dir",
+        "-o",
+        default=".",
         help="Output directory (default: current directory)",
     )
 
@@ -194,8 +206,8 @@ def main():
         print(f"  → {path}")
     print()
     print(f"  cd {result['project_dir']}")
-    print(f"  pip install -r requirements.txt")
-    print(f"  stateweave doctor")
+    print("  pip install -r requirements.txt")
+    print("  stateweave doctor")
 
 
 if __name__ == "__main__":

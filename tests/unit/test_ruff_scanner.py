@@ -57,11 +57,13 @@ class TestRuffQualityScanner(unittest.TestCase):
     def test_detects_format_violations(self):
         """Scanner should detect ruff format violations."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            # Create a file with bad formatting
+            # Create a file with bad formatting (inconsistent quotes, bad spacing)
             dirty_file = os.path.join(tmpdir, "ugly.py")
             with open(dirty_file, "w") as f:
                 f.write(
-                    "x={1:2,3:4,5:6,7:8,9:10,11:12,13:14,15:16,17:18,19:20,21:22,23:24,25:26}\n"
+                    "def foo(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z):\n"
+                    "    return     {  'a' :a,'b':b,   'c':c,\n"
+                    "'d':d,'e':e  ,'f':f  ,'g'   :g ,'h':h}\n"
                 )
 
             config = {

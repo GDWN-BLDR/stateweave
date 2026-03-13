@@ -47,7 +47,9 @@ class TestCheckpointMiddleware(unittest.TestCase):
 
     def test_record_returns_false_before_threshold(self):
         mw = CheckpointMiddleware(
-            agent_id="test", every_n_steps=5, store_dir=self.tmpdir,
+            agent_id="test",
+            every_n_steps=5,
+            store_dir=self.tmpdir,
         )
         payload = _make_payload()
         self.assertFalse(mw.record(payload))
@@ -55,7 +57,9 @@ class TestCheckpointMiddleware(unittest.TestCase):
 
     def test_record_returns_true_at_threshold(self):
         mw = CheckpointMiddleware(
-            agent_id="test", every_n_steps=3, store_dir=self.tmpdir,
+            agent_id="test",
+            every_n_steps=3,
+            store_dir=self.tmpdir,
         )
         payload = _make_payload()
         mw.record(payload)  # step 1
@@ -66,7 +70,9 @@ class TestCheckpointMiddleware(unittest.TestCase):
 
     def test_force_checkpoint(self):
         mw = CheckpointMiddleware(
-            agent_id="test", every_n_steps=100, store_dir=self.tmpdir,
+            agent_id="test",
+            every_n_steps=100,
+            store_dir=self.tmpdir,
         )
         payload = _make_payload()
         result = mw.record(payload, force=True)
@@ -76,7 +82,9 @@ class TestCheckpointMiddleware(unittest.TestCase):
     def test_context_manager(self):
         payload = _make_payload()
         with CheckpointMiddleware(
-            agent_id="test", every_n_steps=2, store_dir=self.tmpdir,
+            agent_id="test",
+            every_n_steps=2,
+            store_dir=self.tmpdir,
         ) as mw:
             mw.record(payload)
             mw.record(payload)  # checkpoint here
@@ -85,7 +93,9 @@ class TestCheckpointMiddleware(unittest.TestCase):
 
     def test_checkpoint_count_increments(self):
         mw = CheckpointMiddleware(
-            agent_id="test", every_n_steps=1, store_dir=self.tmpdir,
+            agent_id="test",
+            every_n_steps=1,
+            store_dir=self.tmpdir,
         )
         payload = _make_payload()
         mw.record(payload)
