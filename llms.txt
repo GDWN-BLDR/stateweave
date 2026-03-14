@@ -60,7 +60,7 @@ StateWeave ships as an MCP server. Add to your MCP config:
 - State merge with CRDT conflict resolution
 - A2A protocol bridge
 - Auto-checkpoint middleware
-- 415+ tests
+- 440+ tests
 
 ## Links
 - Source: https://github.com/GDWN-BLDR/stateweave

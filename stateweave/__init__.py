@@ -27,7 +27,7 @@ Quick Start::
     mcp.import_state(payload)
 """
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 
 # Public API — Schema

@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] — 2026-03-13
+
+### Changed
+
+- **New positioning**: `git` for agent brains — updated across README, docs, pyproject.toml, CLI, Dockerfile, llms.txt, stateweave.json, website, and all content
+- **README quickstart**: Export code example is now fully self-contained and copy-paste-runnable (no undefined variables)
+- **Stale numbers fixed**: Test count updated to 440+ (was variously 254/315/370/415), CLI command count corrected to 14 (was 13)
+- **HN title**: Shortened to 43 chars (from 82) per launch playbook research
+
+---
+
 ## [0.3.0] — 2026-03-13
 
 ### Added
@@ -25,8 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Schema Registry** — `stateweave/registry/client.py` local-first registry for publishing, discovering, and reusing StateWeave payload schemas with text + tag search.
 - **VS Code Extension** — `vscode-extension/` with 5 commands (validate, diff, doctor, generate-adapter, preview), status bar, and payload preview dashboard.
 - **TypeScript SDK** — `sdk/typescript/src/index.ts` with full Universal Schema type definitions, `StateWeaveSerializer`, `diffPayloads()`, `createPayload()`, and `StateWeaveAdapter` interface.
-- **CLI**: 15 commands total (added `scan`, `checkpoint`, `history`, `rollback`, `doctor`)
-- **100 new tests** — total 415+ (up from 315)
+- **CLI**: 14 commands total (added `scan`, `checkpoint`, `history`, `rollback`, `doctor`)
+- **127 new tests** — total 440+ (up from 315)
 
 ### Changed
 

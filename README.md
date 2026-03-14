@@ -50,6 +50,7 @@ StateWeave solves three critical problems in the AI agent ecosystem:
 ### See it working
 
 ```
+$ pip install stateweave
 $ python examples/quickstart.py
 
 Exported: 2 messages
@@ -93,15 +94,21 @@ Claude and Cursor can now export, import, and diff your agent state directly.
 ### Export an Agent's State
 
 ```python
-from stateweave import LangGraphAdapter, StateWeaveSerializer
+from stateweave import LangGraphAdapter, MCPAdapter, diff_payloads
+
+# Set up a LangGraph agent with some state
+lg = LangGraphAdapter()
+lg._agents["my-agent"] = {
+    "messages": [
+        {"type": "human", "content": "What's the weather?"},
+        {"type": "ai", "content": "It's 72°F and sunny!"},
+    ],
+    "current_task": "weather_check",
+}
 
 # Export from LangGraph
-adapter = LangGraphAdapter(checkpointer=my_checkpointer)
-payload = adapter.export_state("my-thread-id")
-
-# Serialize for transport
-serializer = StateWeaveSerializer()
-raw_bytes = serializer.dumps(payload)
+payload = lg.export_state("my-agent")
+print(f"Exported: {len(payload.cognitive_state.conversation_history)} messages")
 ```
 
 ### Import into Another Framework
