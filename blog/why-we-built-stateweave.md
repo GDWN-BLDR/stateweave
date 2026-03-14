@@ -95,7 +95,7 @@ AES-256-GCM encryption. Ed25519 signing. PBKDF2 key derivation with 600K iterati
 StateWeave currently supports 10 frameworks (LangGraph, MCP, CrewAI, AutoGen, DSPy, LlamaIndex, OpenAI Agents, Haystack, Letta, and Semantic Kernel). Our highest-priority work is:
 
 1. **Community adapters** — making it trivial for anyone to add framework #11
-2. **MCP Server** — StateWeave ships as an MCP server, so Claude and Cursor can export/import/diff agent state directly
+2. **Deeper framework integrations** — the LangGraph adapter has real integration tests; we're extending that rigor to all Tier 1 adapters
 3. **Real-world stress testing** — we need teams to break it on production workloads
 
 ## Try It
