@@ -1,6 +1,6 @@
 # StateWeave
 
-> Cross-framework cognitive state serializer for AI agents.
+> `git` for agent brains — cross-framework cognitive state serializer for AI agents.
 
 StateWeave lets AI agents migrate between frameworks (LangGraph, MCP, CrewAI, AutoGen, DSPy, LlamaIndex, OpenAI Agents, Haystack, Letta, Semantic Kernel) while keeping their accumulated knowledge — conversation history, working memory, goals, tool results, and trust parameters.
 

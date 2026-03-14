@@ -1,7 +1,7 @@
 <p align="center">
   <h1 align="center">🧶 StateWeave</h1>
-  <p align="center"><strong>Your agent switches frameworks. Its memories come with it.</strong></p>
-  <p align="center"><em>10 frameworks · 3 lines of code · 0 data loss</em></p>
+  <p align="center"><strong><code>git</code> for agent brains.</strong></p>
+  <p align="center"><em>Your agent switches frameworks. Its memories come with it.</em></p>
   <p align="center">
     <a href="https://pypi.org/project/stateweave/"><img src="https://img.shields.io/pypi/v/stateweave?color=%2334D058&label=PyPI" alt="PyPI"></a>
     <a href="https://github.com/GDWN-BLDR/stateweave/actions"><img src="https://img.shields.io/github/actions/workflow/status/GDWN-BLDR/stateweave/ci.yml?label=CI" alt="CI"></a>
@@ -567,5 +567,5 @@ Without StateWeave, migrating agent state between frameworks means:
 ---
 
 <p align="center">
-  <strong>🧶 StateWeave</strong> — Your agent's memories shouldn't be locked to one framework.
+  <strong>🧶 StateWeave</strong> — <code>git</code> for agent brains.
 </p>

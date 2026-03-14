@@ -4,7 +4,7 @@
       "command": "python3",
       "args": ["-m", "stateweave.mcp_server"],
       "env": {},
-      "description": "StateWeave — Cross-framework cognitive state serializer for AI agents. Export, import, and diff agent state across LangGraph, MCP, CrewAI, AutoGen, DSPy, OpenAI Agents, LlamaIndex, Haystack, Letta, and Semantic Kernel.",
+      "description": "StateWeave — git for agent brains. Export, import, checkpoint, rollback, diff, and encrypt agent state across LangGraph, MCP, CrewAI, AutoGen, DSPy, OpenAI Agents, LlamaIndex, Haystack, Letta, and Semantic Kernel.",
       "homepage": "https://github.com/GDWN-BLDR/stateweave"
     }
   }

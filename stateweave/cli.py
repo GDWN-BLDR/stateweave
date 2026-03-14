@@ -315,7 +315,7 @@ def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
         prog="stateweave",
-        description="🧶 StateWeave — Cross-framework cognitive state serializer",
+        description="🧶 StateWeave — git for agent brains",
         epilog=(
             "Examples:\n"
             "  stateweave version\n"

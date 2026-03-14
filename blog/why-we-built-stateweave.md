@@ -1,4 +1,4 @@
-# Why We Built StateWeave: Agent Memories Shouldn't Be Disposable
+# Why We Built StateWeave: `git` for Agent Brains
 
 *March 2026*
 

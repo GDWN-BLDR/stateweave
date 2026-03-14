@@ -2,7 +2,7 @@ FROM python:3.12-slim
 
 LABEL maintainer="Pantoll Ventures <contact@pantollventures.com>"
 LABEL org.opencontainers.image.source="https://github.com/GDWN-BLDR/stateweave"
-LABEL org.opencontainers.image.description="StateWeave MCP Server — Cross-framework cognitive state serializer"
+LABEL org.opencontainers.image.description="StateWeave MCP Server — git for agent brains"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 
 WORKDIR /app
