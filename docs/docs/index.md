@@ -2,7 +2,7 @@
 
 **`git` for agent brains.** Your agent switches frameworks. Its memories come with it.
 
-StateWeave is a cross-framework cognitive state serializer for AI agents. Export state from LangGraph, import into MCP, CrewAI, AutoGen, DSPy, or any of 10 supported frameworks — with zero silent data loss.
+StateWeave moves, debugs, and secures AI agent state across 10 frameworks. Export from LangGraph, import into MCP, CrewAI, AutoGen, DSPy, or any of 10 supported frameworks — with zero silent data loss.
 
 ## Quick Links
 

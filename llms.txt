@@ -1,8 +1,8 @@
 # StateWeave
 
-> `git` for agent brains — cross-framework cognitive state serializer for AI agents.
+> `git` for agent brains — move, debug, and secure AI agent state across 10 frameworks.
 
-StateWeave lets AI agents migrate between frameworks (LangGraph, MCP, CrewAI, AutoGen, DSPy, LlamaIndex, OpenAI Agents, Haystack, Letta, Semantic Kernel) while keeping their accumulated knowledge — conversation history, working memory, goals, tool results, and trust parameters.
+StateWeave lets AI agents move between frameworks (LangGraph, MCP, CrewAI, AutoGen, DSPy, LlamaIndex, OpenAI Agents, Haystack, Letta, Semantic Kernel) while keeping their accumulated knowledge — conversation history, working memory, goals, tool results, and trust parameters.
 
 ## Install
 
@@ -16,7 +16,13 @@ pip install stateweave
 from stateweave import LangGraphAdapter, MCPAdapter, diff_payloads
 
 # Export from LangGraph
-adapter = LangGraphAdapter(checkpointer=my_checkpointer)
+adapter = LangGraphAdapter()
+adapter._agents["my-agent"] = {
+    "messages": [
+        {"type": "human", "content": "What's the weather?"},
+        {"type": "ai", "content": "It's 72°F and sunny!"},
+    ],
+}
 payload = adapter.export_state("my-agent")
 
 # Import into MCP

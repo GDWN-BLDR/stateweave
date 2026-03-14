@@ -1,9 +1,8 @@
 # stateweave top-level __init__
 """
-StateWeave — Cross-Framework Cognitive State Serializer
+StateWeave — git for agent brains.
 ========================================================
-Enables AI agents to migrate between frameworks while preserving
-their accumulated knowledge and reasoning state.
+Move, debug, and secure AI agent state across 10 frameworks.
 
 Quick Start::
 
