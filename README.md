@@ -14,9 +14,9 @@
 
 <!-- mcp-name: stateweave -->
 
-**StateWeave** is a time-travel debugger and security control plane for AI agents. Checkpoint, rollback, diff, encrypt, sign, and migrate cognitive state across LangGraph, MCP, CrewAI, AutoGen, DSPy, LlamaIndex, OpenAI Agents, Haystack, Letta, and Semantic Kernel.
+**StateWeave** moves, debugs, and secures AI agent state across 10 frameworks. Export from LangGraph, import into MCP, checkpoint, rollback, diff, encrypt, sign — all through a single Universal Schema.
 
-When a 20-step autonomous workflow derails at step 15, don't restart from scratch — rewind to step 14, fix the issue, and replay. When your enterprise needs to audit agent behavior, every state transition is versioned, signed, and encrypted.
+When your agent needs to switch frameworks, its memories come with it. When a 20-step autonomous workflow derails at step 15, rewind to step 14, fix the issue, and replay. When your enterprise needs to audit agent behavior, every state transition is versioned, signed, and encrypted.
 
 ## Why StateWeave?
 

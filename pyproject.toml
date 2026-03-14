@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "stateweave"
 version = "0.3.0"
-description = "Time-travel debugger and security control plane for AI agents — checkpoint, rollback, diff, encrypt, and migrate cognitive state across 10 frameworks"
+description = "Move, debug, and secure AI agent state across 10 frameworks — export, import, checkpoint, rollback, diff, encrypt, and sign cognitive state"
 readme = "README.md"
 license = {text = "Apache-2.0"}
 requires-python = ">=3.10"

@@ -76,10 +76,16 @@ Every checkpoint is content-addressed (SHA-256), has parent hash chains, and sup
 
 ### 3. Security
 ```python
-from stateweave.core.encryption import encrypt_payload, sign_payload
+from stateweave.core.encryption import EncryptionFacade
+from stateweave.core.signing import sign_payload, generate_keypair
 
-encrypted = encrypt_payload(payload, password="enterprise-key")
-signed = sign_payload(payload, private_key=ed25519_key)
+# Encrypt with a passphrase (AES-256-GCM + PBKDF2)
+facade = EncryptionFacade.from_passphrase("enterprise-key")
+ciphertext, nonce = facade.encrypt(serialized_bytes)
+
+# Sign for audit compliance (Ed25519)
+private_key, public_key = generate_keypair()
+signature = sign_payload(payload, private_key)
 ```
 
 AES-256-GCM encryption. Ed25519 signing. PBKDF2 key derivation with 600K iterations. Credentials are auto-stripped on export with explicit `non_portable_warnings`.
