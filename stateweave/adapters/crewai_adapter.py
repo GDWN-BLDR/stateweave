@@ -29,6 +29,16 @@ from stateweave.schema.v1 import (
     ToolResult,
 )
 
+# Conditional imports: use native CrewAI types when available
+try:
+    from crewai import Agent as CrewAIAgent  # noqa: F401
+    from crewai import Crew as CrewAICrew  # noqa: F401
+    from crewai import Task as CrewAITask  # noqa: F401
+
+    HAS_CREWAI = True
+except ImportError:
+    HAS_CREWAI = False
+
 logger = logging.getLogger("stateweave.adapters.crewai")
 
 CREWAI_TARGET_VERSION = "0.86.x"

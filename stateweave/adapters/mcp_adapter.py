@@ -26,6 +26,15 @@ from stateweave.schema.v1 import (
     ToolResult,
 )
 
+# Conditional imports: use native MCP SDK types when available
+try:
+    from mcp.types import Resource as MCPResource  # noqa: F401
+    from mcp.types import Tool as MCPTool  # noqa: F401
+
+    HAS_MCP = True
+except ImportError:
+    HAS_MCP = False
+
 logger = logging.getLogger("stateweave.adapters.mcp")
 
 MCP_TARGET_VERSION = "1.0.x"

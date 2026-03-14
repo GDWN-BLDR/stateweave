@@ -26,6 +26,14 @@ from stateweave.schema.v1 import (
     ToolResult,
 )
 
+# Conditional imports: use native AutoGen types when available
+try:
+    from autogen import ConversableAgent  # noqa: F401
+
+    HAS_AUTOGEN = True
+except ImportError:
+    HAS_AUTOGEN = False
+
 logger = logging.getLogger("stateweave.adapters.autogen")
 
 AUTOGEN_TARGET_VERSION = "0.4.x"

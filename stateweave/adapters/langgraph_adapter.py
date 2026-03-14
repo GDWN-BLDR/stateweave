@@ -25,6 +25,21 @@ from stateweave.schema.v1 import (
     ToolResult,
 )
 
+# Conditional imports: use native LangGraph types when available
+try:
+    from langchain_core.messages import (
+        AIMessage,
+        HumanMessage,
+        SystemMessage,
+        ToolMessage,
+    )
+    from langgraph.checkpoint.memory import MemorySaver  # noqa: F401
+    from langgraph.graph import StateGraph  # noqa: F401
+
+    HAS_LANGGRAPH = True
+except ImportError:
+    HAS_LANGGRAPH = False
+
 logger = logging.getLogger("stateweave.adapters.langgraph")
 
 # LangGraph version this adapter targets
@@ -298,8 +313,22 @@ class LangGraphAdapter(StateWeaveAdapter):
         )
 
     def _translate_message(self, msg: Any) -> Optional[Message]:
-        """Translate a single LangGraph message to Universal Schema."""
-        if isinstance(msg, dict):
+        """Translate a single LangGraph message to Universal Schema.
+
+        Supports both dict-based messages and native LangChain message
+        objects (HumanMessage, AIMessage, etc.) when langgraph is installed.
+        """
+        # Native LangChain message objects (when langgraph is installed)
+        if HAS_LANGGRAPH and isinstance(msg, (HumanMessage, AIMessage, SystemMessage, ToolMessage)):
+            type_name = type(msg).__name__
+            role = LANGGRAPH_ROLE_MAP.get(type_name, MessageRole.HUMAN)
+            return Message(
+                role=role,
+                content=str(msg.content),
+                name=getattr(msg, "name", None),
+                tool_call_id=getattr(msg, "tool_call_id", None),
+            )
+        elif isinstance(msg, dict):
             role_str = msg.get("type", msg.get("role", "human"))
             role = LANGGRAPH_ROLE_MAP.get(role_str, MessageRole.HUMAN)
             return Message(
@@ -314,7 +343,7 @@ class LangGraphAdapter(StateWeaveAdapter):
                 },
             )
         elif hasattr(msg, "content"):
-            # LangChain message object
+            # Generic message-like object
             type_name = type(msg).__name__
             role = LANGGRAPH_ROLE_MAP.get(type_name, MessageRole.HUMAN)
             return Message(
