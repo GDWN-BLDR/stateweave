@@ -136,6 +136,7 @@ class LangGraphAdapter(StateWeaveAdapter):
         """
         include_history = kwargs.get("include_history", True)
         config = kwargs.get("config", {"configurable": {"thread_id": agent_id}})
+        self._require_framework(HAS_LANGGRAPH, "langgraph")
 
         try:
             state_snapshot = self._get_state(agent_id, config)

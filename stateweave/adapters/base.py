@@ -161,3 +161,27 @@ class StateWeaveAdapter(ABC):
             return True
         except Exception:
             return False
+
+    def _require_framework(self, has_flag: bool, framework_name: str) -> None:
+        """Check that the target framework is installed, with a helpful error.
+
+        Call this at the start of export_state/import_state to give users
+        a clear, actionable error message instead of a confusing ImportError
+        deep in the call stack.
+
+        Args:
+            has_flag: The HAS_<FRAMEWORK> boolean from the adapter module.
+            framework_name: Human-readable framework name for the error.
+
+        Raises:
+            AdapterError: If the framework is not installed.
+        """
+        if not has_flag:
+            pip_extra = self.framework_name.replace("-", "_")
+            raise AdapterError(
+                f"{framework_name} is not installed. "
+                f"To use the {self.framework_name} adapter, install it with:\n\n"
+                f'    pip install "stateweave[{pip_extra}]"\n\n'
+                f"Or install {framework_name} directly:\n\n"
+                f"    pip install {framework_name}"
+            )

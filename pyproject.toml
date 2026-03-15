@@ -74,6 +74,11 @@ stateweave = ["py.typed"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks integration tests that test cross-adapter flows",
+    "requires_framework: marks tests that require a specific framework to be installed",
+]
 
 [tool.ruff]
 target-version = "py310"
