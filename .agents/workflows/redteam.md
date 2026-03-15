@@ -140,6 +140,14 @@ git commit -m "docs: red team analysis vN — [date]"
 
 ## Quick Reference
 
-- **Automated scan only:** `python scripts/redteam_audit.py`
-- **Full /redteam:** Follow all 4 phases above
+- **Automated scan only (fast):** `python3 scripts/redteam_audit.py --quick`
+- **Full audit with TTV + personas:** `python3 scripts/redteam_audit.py --personas`
+- **JSON output for CI:** `python3 scripts/redteam_audit.py --quick --json --no-history`
 - **After fixes:** Re-run Phase 1 to verify, then update the report
+
+### v2 Features
+- **Auto consistency matrix** — extracts numbers from every surface and flags mismatches
+- **Time-to-value test** — fresh venv install + demo in < 90s (requires Python ≥ 3.10)
+- **Persona scorecards** — auto-scored 1-5 for 7 personas (HN, Security, Competitor, First-Time User, Journalist, SMB, MM, Enterprise)
+- **Audit history** — appends to `breakdown/audit_history.jsonl`, shows trends vs previous run
+- **CI integration** — `.github/workflows/redteam-audit.yml` runs `--quick` on every push, full on manual trigger

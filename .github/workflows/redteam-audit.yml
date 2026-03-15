@@ -1,0 +1,27 @@
+name: Red Team Audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  redteam:
+    name: Red Team Surface Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run red team audit (quick mode)
+        run: python3 scripts/redteam_audit.py --quick --no-history
+
+      - name: Run full audit with TTV (manual trigger only)
+        if: github.event_name == 'workflow_dispatch'
+        run: python3 scripts/redteam_audit.py --personas --no-history
