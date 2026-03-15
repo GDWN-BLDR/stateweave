@@ -59,7 +59,7 @@ def substep(text: str):
 
 def main():
     banner("🧶 STATEWEAVE: Cloud-to-Local Sandbox Escape", MAGENTA)
-    print(f"  {DIM}Demonstrating cross-framework cognitive state portability{RESET}")
+    print(f"  {DIM}git for agent brains — move, debug, and secure AI agent state{RESET}")
     print(f"  {DIM}A LangGraph agent's brain migrates to MCP — memories intact{RESET}")
     print()
 
