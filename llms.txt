@@ -29,8 +29,9 @@ payload = adapter.export_state("my-agent")
 mcp = MCPAdapter()
 mcp.import_state(payload)
 
-# Diff two states
-diff = diff_payloads(old_payload, new_payload)
+# Re-export from MCP to compare
+mcp_payload = mcp.export_state("my-agent")
+diff = diff_payloads(payload, mcp_payload)
 ```
 
 ## MCP Server

@@ -27,7 +27,7 @@ jobs:
           # LangGraph — Tier 1
           - adapter: langgraph
             framework-version: "pinned"
-            pip-install: "langgraph==0.2.0 langchain-core==0.3.0"
+            pip-install: "langgraph==0.2.62 langchain-core==0.3.0"
             test-path: "tests/unit/test_langgraph_adapter.py tests/integration/test_langgraph_to_mcp.py"
           - adapter: langgraph
             framework-version: "latest"
