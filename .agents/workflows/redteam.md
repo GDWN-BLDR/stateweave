@@ -27,7 +27,7 @@ python scripts/redteam_audit.py
 
 ## Phase 2: Red Team Personas
 
-Walk each of the 8 personas below through the relevant surface. Each persona has
+Walk each of the 11 personas below through the relevant surface. Each persona has
 a specific attack angle — do NOT skip any. For each persona, open the relevant
 URL/file and evaluate from their perspective.
 
@@ -70,6 +70,37 @@ URL/file and evaluate from their perspective.
 - **Surface:** `content/blog_post.md`, `content/hn_post.md`, website
 - **Attack:** "The numbers don't add up. The blog says X but the website says Y."
 - **Check:** Cross-reference every number across all surfaces. Framework count, test count, CLI count, adapter names must match everywhere.
+
+### Persona 9: SMB Customer (Solo Founder / Small Team)
+- **Surface:** Website hero + Quick Start, README "See it working", PyPI install
+- **Attack:** "I have 2 devs and no time. Can I get value in 15 minutes, or is this a science project?"
+- **Check:**
+  - Time to first working demo: Is `pip install stateweave && python examples/full_demo.py` genuinely < 60 seconds?
+  - Is there a clear "what do I do next" after the demo? Or does the journey dead-end?
+  - Vendor risk: Is this 1 person's side project? Would I bet my agent infra on it? (check contributor count, commit velocity, bus factor)
+  - Pricing: Is it clear this is free/open-source? Or does the website feel like it's hiding a "Contact Sales" wall?
+  - **Rule:** If the SMB can't go from zero to working in one terminal session, it's a fail.
+
+### Persona 10: Mid-Market Customer (Engineering Manager, 10–50 eng)
+- **Surface:** Website (Frameworks table, Security section, FAQ), docs, CONTRIBUTING.md
+- **Attack:** "My team uses LangGraph today and might switch to CrewAI next quarter. Can I actually mandate this as a standard?"
+- **Check:**
+  - Is the framework coverage table honest about what's Tier 1 vs Community? Would a manager trust the Community-tier adapters in prod?
+  - Documentation: Is there enough for a team to adopt without hand-holding? Are there migration guides?
+  - Support: Is there a path to get help? (GitHub Issues, Discussions, Discord?) Is it discoverable from the website?
+  - Testing story: Can I tell my VP "this has 440+ tests and CI" with a straight face? Are the test badges real?
+  - **Rule:** If the engineering manager can't write a one-paragraph justification to their VP, the positioning is too vague.
+
+### Persona 11: Enterprise Customer (Platform Architect / Procurement)
+- **Surface:** Security section, LICENSE, SECURITY.md, encryption code, compliance scanners
+- **Attack:** "Our legal team needs to approve this. Our CISO needs to sign off. Show me your audit trail."
+- **Check:**
+  - License: Is Apache-2.0 clearly stated? Any ambiguity about commercial use?
+  - Security: Is the encryption real (AES-256-GCM)? Is there a SECURITY.md with a vulnerability disclosure process?
+  - Compliance: Are there audit-friendly features? (state diffs = audit trail, encryption at rest, non-portable warnings)
+  - Data residency: Does state ever leave the customer's infra? Is that clear?
+  - Maturity signals: Is there a CHANGELOG? Semantic versioning? Deprecation policy? Or does this look like a v0 hobby project?
+  - **Rule:** If the enterprise architect can't answer "where does my data go?" in 30 seconds from the website, it's a fail.
 
 ---
 
