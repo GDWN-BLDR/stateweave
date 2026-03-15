@@ -49,22 +49,44 @@ StateWeave solves three critical problems in the AI agent ecosystem:
 
 ### See it working
 
+<p align="center">
+  <img src="assets/demo.webp" alt="StateWeave demo — export, import, diff, time travel, encrypt from pip install" width="700">
+</p>
+
 ```
 $ pip install stateweave
-$ python examples/quickstart.py
+$ python examples/full_demo.py
 
-Exported: 2 messages
-Framework: langgraph
+━━ 1. Export from LangGraph ━━
+  ✓ Exported 4 messages
+  ✓ Source framework: langgraph
 
-Imported into MCP ✅
-MCP has: 2 messages
+━━ 2. Import into MCP ━━
+  ✓ Imported into mcp
+  ✓ Messages preserved: 4
 
-Diff: 15 changes (framework tag + timestamps)
+━━ 3. Verify Round-Trip ━━
+  ✓ Zero data loss: YES
 
-Done! The agent's memories migrated successfully. 🧶
+━━ 4. Diff Agent States ━━
+  Summary: 7 added, 4 removed, 7 modified
+
+━━ 5. Time Travel ━━
+  ✓ Checkpoint v1 (initial-research)
+  ✓ Checkpoint v2 (after-drug-discovery)
+  ✓ Rolled back → 4 msgs
+
+━━ 6. Encryption (AES-256-GCM) ━━
+  ✓ 1,733 bytes → 1,749 bytes encrypted
+  ✓ Decrypted: 4 messages intact
+
+━━ 7. Non-Portable Warnings ━━
+  ✓ No non-portable warnings (clean export)
+
+7/7 steps passed. Everything runs from PyPI.
 ```
 
-See the full [Cloud-to-Local Sandbox Escape](examples/sandbox_escape/) demo for a more advanced scenario.
+> Try it yourself: `pip install stateweave && python -c "from stateweave import LangGraphAdapter; print('Ready ✓')"`
 
 ## Quick Start
 
