@@ -14,7 +14,7 @@ If you discover a security vulnerability in StateWeave, **please do NOT open a p
 
 Instead, please report it privately:
 
-1. **Email**: security@stateweave.dev
+1. **Email**: security@pantollventures.com
 2. **Subject**: `[SECURITY] Brief description of vulnerability`
 3. **Include**:
    - Description of the vulnerability

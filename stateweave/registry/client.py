@@ -5,7 +5,7 @@ Local-first registry that enables developers to publish, discover,
 and reuse StateWeave payload schemas and adapter extensions.
 
 Storage: ~/.stateweave/registry/ (local)
-Future: registry.stateweave.dev (hosted)
+Future: registry.stateweave.pantollventures.com (hosted)
 
 Usage:
     from stateweave.registry import RegistryClient

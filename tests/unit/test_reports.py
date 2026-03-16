@@ -81,7 +81,7 @@ class TestMigrationReport:
         html = report.to_html()
         assert "<!DOCTYPE html>" in html
         assert "StateWeave" in html
-        assert "stateweave.dev" in html
+        assert "stateweave.pantollventures.com" in html
 
     def test_markdown_warnings_table(self):
         source = _make_payload(
