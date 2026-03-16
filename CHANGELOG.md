@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] — 2026-03-15
+
+### Fixed
+
+- **`stateweave generate-adapter` crash** — Template had unescaped Python expression inside `str.format()`, causing `KeyError` on every invocation
+- **Dead `stateweave.dev` URLs** — Domain does not resolve; replaced with `stateweave.pantollventures.com` in migration reports, registry client, SECURITY.md, and CODE_OF_CONDUCT.md
+- **Better error messages** — `_require_framework()` helper gives clear `pip install` instructions when a framework dependency is missing
+- **Pytest markers** — Added `slow`, `integration`, `requires_framework` markers to `pyproject.toml` for better test organization
+
+### Removed
+
+- **Internal audit docs** — Removed `breakdown/` directory from git tracking (was committed before `.gitignore` rule)
+
+---
+
 ## [0.3.1] — 2026-03-13
 
 ### Changed
