@@ -186,3 +186,15 @@ ruff_quality:
     - "stateweave/"
     - "tests/"
     - "scripts/"
+
+# ============================================================
+# LAW 10: Adapter Isolation
+# Adapters MUST work without their framework installed.
+# This scanner catches the exact bug class that broke CI for
+# 6+ commits: unconditional _require_framework() calls.
+# ============================================================
+adapter_isolation:
+  enabled: true
+  mode: BLOCK
+  description: "Ensures adapters work without target framework installed"
+  adapters_dir: "stateweave/adapters"
