@@ -19,7 +19,7 @@ logger = logging.getLogger("stateweave.core.generator")
 
 ADAPTER_TEMPLATE = '''"""
 {framework_title} Adapter — Translates {framework_title} agent state ↔ Universal Schema.
-{'=' * (len(framework_title) + 60)}
+{separator}
 Maps {framework_title}'s internal state representation
 to the StateWeave Universal Schema for cross-framework portability.
 
@@ -311,6 +311,7 @@ def generate_adapter_scaffold(
         "framework_title": fw_title,
         "framework_upper": fw_upper,
         "class_name": class_name,
+        "separator": "=" * (len(fw_title) + 60),
     }
 
     # Generate adapter file
