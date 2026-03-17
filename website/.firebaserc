@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "stateweave-site"
+  },
+  "targets": {
+    "pantoll-ventures-296fa": {
+      "hosting": {
+        "stateweave-pantoll": [
+          "stateweave-pantoll"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
