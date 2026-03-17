@@ -10,17 +10,14 @@ Post one per day across the week. Do NOT post them all at once.
 
 **Body:**
 
-I've been hanging out in agent communities for a while and noticed
-something: debugging complex LangGraph workflows is painful. When a
-20-step agent flow goes wrong at step 15, you restart from scratch.
+I've been digging into LangGraph and noticed a pattern in the community:
+debugging complex workflows is painful. When a 20-step agent flow goes
+wrong at step 15, you restart from scratch. And if you ever want to move
+your agent's accumulated knowledge to another framework, you're stuck.
 
-StateWeave is a hobby project I've been working on to fix this. Think
-`git` for your agent's cognitive state — checkpoint at any step,
-rollback to a known-good state, diff to see exactly what changed.
-
-The LangGraph adapter works directly with real StateGraph and
-MemorySaver — I wrote integration tests against the actual framework,
-not mock objects:
+I built StateWeave to address both problems. Think `git` for your
+agent's cognitive state — checkpoint at any step, rollback to a
+known-good state, diff to see exactly what changed.
 
 ```python
 from stateweave.core.timetravel import CheckpointStore
@@ -34,6 +31,10 @@ store.checkpoint(payload, label="step-14")
 diff = store.diff_versions("my-agent", version_a=14, version_b=15)
 restored = store.rollback("my-agent", version=14)
 ```
+
+The LangGraph adapter works directly with real StateGraph and
+MemorySaver — integration tests run against the actual framework,
+not mock objects.
 
 Also includes AES-256-GCM encryption, Ed25519 signing, smart
 checkpointing (only save on significant state changes), and
@@ -57,9 +58,11 @@ interested in hearing from anyone debugging complex multi-step workflows.
 StateWeave is an open-source Python library for versioning and securing
 AI agent cognitive state.
 
-The core observation: agent workflows are non-deterministic. When they
-go wrong, you need to pause, rewind, inspect, and replay — not restart.
-StateWeave gives you `git`-like version control for agent state.
+The motivation: agent workflows are non-deterministic. When they go
+wrong, you need to pause, rewind, inspect, and replay — not restart.
+I kept seeing this pain point come up in communities and issue trackers,
+and nobody seemed to be building the tooling for it. So I built
+StateWeave — `git`-like version control for agent state.
 
 What you get:
 - **Time travel** — checkpoint, rollback, branch, diff agent state
@@ -108,7 +111,8 @@ so you only save when state changes significantly.
 
 Apache 2.0: https://github.com/GDWN-BLDR/stateweave
 
-Hobby project, still early. Feedback welcome.
+Learning project that grew into something I think might be genuinely
+useful. Feedback welcome.
 
 ---
 
@@ -118,12 +122,10 @@ Hobby project, still early. Feedback welcome.
 
 **Body:**
 
-Been working on this library as a hobby project. Just put it up on PyPI.
-
-The idea: when complex AI agent workflows break at step 15 of 20, the
-only option today is to restart from scratch. StateWeave gives you
-`git`-like version control for agent cognitive state — checkpoint,
-rollback, diff, branch.
+I've been learning about AI agent frameworks and kept noticing the same
+gap: when complex workflows break partway through, there's no good way
+to rewind. And when you want to move an agent's knowledge between
+frameworks, you start over. I built StateWeave to fix both.
 
 ```python
 from stateweave.core.timetravel import CheckpointStore

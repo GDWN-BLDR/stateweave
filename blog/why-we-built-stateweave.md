@@ -2,21 +2,31 @@
 
 *March 2026*
 
-## The Problem Nobody Talks About
+## The Problem Nobody's Solving
 
-Here's a scenario every AI engineer has lived through:
+I've been spending a lot of time learning about AI agent frameworks —
+LangGraph, CrewAI, AutoGen, MCP, DSPy — and I kept noticing the same
+frustrations come up in communities, issue trackers, and forums:
 
-You build an agent on LangGraph. It works. It learns. Over 200 conversations, it develops nuanced understanding of your domain — your coding patterns, your business rules, your preferences.
+People build agents that accumulate real knowledge over hundreds of
+conversations. Then they need to switch frameworks. Maybe CrewAI fits
+the multi-agent pattern better. Maybe they need MCP compatibility. Maybe
+they're evaluating AutoGen for better multi-agent coordination.
 
-Then your team decides to switch to CrewAI. Or you need to run the agent locally through MCP because it hit a VPN wall. Or you're evaluating AutoGen for better multi-agent coordination.
+**What happens to everything the agent learned?**
 
-**What happens to everything the agent learned?** 
+They start over. All that accumulated context — gone.
 
-You start over. Two hundred conversations of accumulated context — gone.
+And the debugging problem is even more common: a 20-step autonomous
+workflow fails at step 15, and there's no way to rewind. You restart
+from scratch. All the API calls — re-billed.
+
+I wanted to learn by building something real, and this seemed like a
+gap worth filling. So I built StateWeave.
 
 ## Why JSON.dumps() Doesn't Cut It
 
-The obvious answer is "just serialize to JSON." I tried that. Here's what I discovered:
+The obvious answer is "just serialize to JSON." But it's not that simple:
 
 1. **Framework state structures are incompatible.** LangGraph stores messages as `HumanMessage` / `AIMessage` objects with tool call metadata. CrewAI uses `TaskOutput` with agent attribution. MCP has its own resource/tool model. You can't just JSON-dump one and load it into another.
 
@@ -91,10 +101,10 @@ AES-256-GCM encryption. Ed25519 signing. PBKDF2 key derivation with 600K iterati
 
 ## What's Next
 
-StateWeave currently supports 10 frameworks (LangGraph, MCP, CrewAI, AutoGen, DSPy, LlamaIndex, OpenAI Agents, Haystack, Letta, and Semantic Kernel). My highest-priority work is:
+StateWeave currently supports 10 frameworks (LangGraph, MCP, CrewAI, AutoGen, DSPy, LlamaIndex, OpenAI Agents, Haystack, Letta, and Semantic Kernel). The highest-priority work is:
 
 1. **Community adapters** — making it trivial for anyone to add framework #11
-2. **Deeper framework integrations** — the LangGraph adapter has real integration tests; I'm extending that rigor to all Tier 1 adapters
+2. **Deeper framework integrations** — the LangGraph adapter has real integration tests; extending that rigor to all Tier 1 adapters
 3. **Real-world stress testing** — I need teams to break it on production workloads
 
 ## Try It

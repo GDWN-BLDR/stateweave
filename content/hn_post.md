@@ -6,51 +6,42 @@ URL: https://github.com/GDWN-BLDR/stateweave
 
 ## First Author Comment (post immediately)
 
-Here's the problem that got me started: when a 20-step autonomous agent
-workflow derails at step 15, the only option is usually to restart from
-scratch. That's expensive, slow, and you lose all the context the agent
-built up.
+I've been learning about AI agent frameworks — LangGraph, CrewAI,
+AutoGen, MCP — and kept seeing the same complaints in communities and
+issue trackers: people lose all their agent's accumulated context when
+they switch frameworks, and debugging complex multi-step workflows is
+brutal because you can't just "undo" a bad step.
 
-I wanted `git` for agent brains — checkpoint at any step, rollback to a
-known-good state, diff to see exactly what changed, and branch to fork
-an agent's cognition for experiments. That's StateWeave.
+I wanted to build something useful in open source, and this seemed like
+a real gap nobody was filling. So I built StateWeave — think `git` for
+agent brains.
 
-Along the way, the architecture naturally led to cross-framework
-portability. Since every agent's state gets translated to a universal
-schema, you can export from LangGraph and import into CrewAI (or any of
-10 supported frameworks) as a free bonus.
+The core idea: serialize everything an agent knows (conversation history,
+working memory, goals, tool results) into a universal schema. From
+there you get two things for free:
 
-Supports: LangGraph, MCP, CrewAI, AutoGen, DSPy, LlamaIndex, OpenAI
-Agents, Haystack, Letta, Semantic Kernel. The LangGraph adapter works
-directly with real StateGraph + MemorySaver (integration tests against
-the actual framework, not mocks).
+1. **Time travel** — checkpoint, rollback, diff, and branch agent state.
+   Content-addressable storage with SHA-256 and parent hash chains.
+   When step 15 of 20 goes wrong, rewind instead of restarting.
 
-**Time Travel** — checkpoint, rollback, branch, and diff agent state.
-Content-addressable storage with SHA-256 hashing and parent hash chains.
-Think `git log` but for your agent's cognitive state.
+2. **Cross-framework portability** — export from LangGraph, import into
+   CrewAI (or any of 10 supported frameworks). Star topology: N
+   adapters, not N² translations.
 
-**Security** — AES-256-GCM encryption, Ed25519 signing, PBKDF2 key
-derivation with 600K iterations, credential stripping on export. No pickle
-or eval anywhere — JSON + Pydantic only. Compliance engine with 12
-automated scanners enforces this across the codebase.
+Some details that might interest this crowd:
+- AES-256-GCM encryption + Ed25519 signing for state in transit
+- PBKDF2 with 600K iterations (OWASP recommendation)
+- Credential stripping — API keys are flagged and removed during export
+- No pickle, no eval — JSON + Pydantic only (compliance engine enforces this)
+- Delta transport for bandwidth-efficient sync
+- A2A protocol bridge for inter-agent state transfer
 
-**Smart Checkpointing** — three strategies: checkpoint every N steps,
-checkpoint only on significant state changes (delta-threshold), or
-manual-only for hot paths. Plus timing instrumentation so you can
-measure overhead.
+Also ships as an MCP Server, so any MCP-compatible assistant can use
+export/import/diff as tools directly. CLI with 14 commands.
 
-**A2A Bridge** — integration with Google's Agent2Agent protocol. A2A
-defines how agents talk to each other; StateWeave adds what they know.
-When one agent hands off to another, the full cognitive state goes with it.
-
-**Zero-Loss Round-Trips** — framework-specific state (like LangGraph's
-internal channels) is preserved in `framework_specific` instead of being
-silently dropped. Same-framework round-trips are truly lossless.
-
-CLI with 14 commands (export, import, diff, checkpoint, rollback, history,
-scan, etc.). Also ships as an MCP Server. Apache 2.0.
-
-Still early and there's a lot more to do — genuinely looking for feedback
-and anyone who wants to help build out deeper framework integrations.
+440+ tests, Apache 2.0. This is genuinely a learning project that
+grew into something I think might be useful — would really appreciate
+feedback, especially from anyone running multi-framework agent setups
+or struggling with agent debugging.
 
 `pip install stateweave`

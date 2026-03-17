@@ -9,14 +9,13 @@ autonomous workflow derails at step 15, your only option is to restart
 from scratch. All the context the agent built up — gone. All the API
 calls — re-billed.
 
-I started noticing this pattern in agent communities. Not just the
-portability problem (people stuck on one framework because they'd
-accumulated too much state to start over), but the far more common
-debugging nightmare. Every developer running complex agent workflows
-hits this wall.
+I kept seeing this pattern in agent communities and issue trackers. Not
+just the portability problem (people stuck on one framework because
+they'd accumulated too much state to migrate), but the far more common
+debugging nightmare. So I built something to fix it.
 
-So I built StateWeave — a time-travel debugger and security control
-plane for AI agents.
+StateWeave is a time-travel debugger and security control plane for AI
+agents.
 
 ## Time travel for agent state
 
@@ -116,5 +115,6 @@ pip install stateweave
 
 GitHub: [GDWN-BLDR/stateweave](https://github.com/GDWN-BLDR/stateweave) — Apache 2.0.
 
-This is a hobby project and still early. If you've dealt with agent
-debugging or state management, I'd be interested to hear about it.
+I built this as a learning project that grew into something I hope is
+genuinely useful. If you've dealt with agent debugging or state
+management pain, I'd love to hear about it.
