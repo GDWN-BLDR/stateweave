@@ -2,11 +2,11 @@
 
 ## Tweet 1 (Hook — works as standalone RT)
 
-I've been learning agent frameworks and kept seeing the same complaint: when a 20-step workflow breaks at step 15, you restart from scratch.
+Kept seeing the same complaint about AI agent frameworks: workflow breaks at step 15, you restart from scratch.
 
-So I built an open-source tool to fix it — checkpoint, rollback, diff, branch agent state across 10 frameworks.
+So I built an open-source tool — checkpoint, rollback, diff agent state across 10 frameworks.
 
-`git` for agent brains.
+git for agent brains.
 
 pip install stateweave
 

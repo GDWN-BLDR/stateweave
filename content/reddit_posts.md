@@ -118,7 +118,7 @@ useful. Feedback welcome.
 
 ## r/Python (Day 5, after blog post)
 
-**Title:** StateWeave — time-travel debugger + security control plane for AI agents (Apache 2.0, Pydantic throughout)
+**Title:** StateWeave — time-travel debugger for AI agents (Apache 2.0, Pydantic throughout)
 
 **Body:**
 
@@ -142,12 +142,9 @@ Things the Python crowd might care about:
 - pyproject.toml-native, ruff-formatted
 - CLI with 14 commands (export, import, diff, detect, scan, checkpoint, history, rollback, etc.)
 - 440+ tests, including integration tests against real LangGraph
-- Ships as MCP Server for tool-using agents
-- Three checkpointing strategies (every-N, delta-threshold, manual-only) with timing instrumentation
 - AES-256-GCM encryption + Ed25519 signing
 - Cross-framework portability: 10 adapters → one universal schema
-- A2A protocol bridge for inter-agent state transfer
-- Zero-loss round-trips: framework internals preserved in `framework_specific`
+- Ships as MCP Server for tool-using agents
 
     pip install stateweave
 
