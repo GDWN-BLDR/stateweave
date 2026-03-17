@@ -7,7 +7,7 @@ URL: https://github.com/GDWN-BLDR/stateweave
 ## First Author Comment (post immediately)
 
 I've been learning about AI agent frameworks — LangGraph, CrewAI,
-AutoGen, MCP — and kept seeing the same complaints in communities and
+AutoGen, MCP — and kept finding the same complaints in communities and
 issue trackers: people lose all their agent's accumulated context when
 they switch frameworks, and debugging complex multi-step workflows is
 brutal because you can't just "undo" a bad step.

@@ -60,8 +60,8 @@ AI agent cognitive state.
 
 The motivation: agent workflows are non-deterministic. When they go
 wrong, you need to pause, rewind, inspect, and replay — not restart.
-I kept seeing this pain point come up in communities and issue trackers,
-and nobody seemed to be building the tooling for it. So I built
+I kept finding this pain point in communities and issue trackers,
+and nobody had built a cross-framework version of this. So I built
 StateWeave — `git`-like version control for agent state.
 
 What you get:

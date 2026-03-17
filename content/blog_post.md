@@ -9,7 +9,7 @@ autonomous workflow derails at step 15, your only option is to restart
 from scratch. All the context the agent built up — gone. All the API
 calls — re-billed.
 
-I kept seeing this pattern in agent communities and issue trackers. Not
+I kept finding this pattern in agent communities and issue trackers. Not
 just the portability problem (people stuck on one framework because
 they'd accumulated too much state to migrate), but the far more common
 debugging nightmare. So I built something to fix it.
