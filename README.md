@@ -259,7 +259,7 @@ Every agent's state is represented as a `StateWeavePayload`:
 
 ```python
 StateWeavePayload(
-    stateweave_version="0.3.2",
+    stateweave_version="0.3.3",
     source_framework="langgraph",
     exported_at=datetime,
     cognitive_state=CognitiveState(

@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] — 2026-03-17
+
+### Fixed
+
+- **Demo crash in clean install** — `LangGraphAdapter` no longer calls `_require_framework()` when used in dict-based mode (no `graph` or `checkpointer` arg)
+- **Blog code examples** — Fixed 3 incorrect API paths in `blog/why-we-built-stateweave.md` (phantom `stateweave.core.signing` module, wrong `message=` param, missing `rollback()` args)
+- **Scanner count** — Updated "10 scanners" → "12 scanners" across README, HN, Twitter, blog, llms.txt (added `adapter_isolation` + `ruff_quality`)
+- **Stale version strings** — Demo banner, README schema example updated to current version
+- **LANGGRAPH_TARGET_VERSION** — Corrected from `1.0.x` to `0.2.x` (matches CI test matrix)
+- **README cleanup** — Removed duplicate comparison table, added 2 missing scanners to UCE table
+- **llms.txt** — Reordered features to lead with time travel + security (matches positioning)
+- **HN title** — Shortened to 43 chars for optimal engagement
+- **Blog tone** — Changed "we" → "I" for solo-builder credibility
+
+---
+
 ## [0.3.2] — 2026-03-15
 
 ### Fixed

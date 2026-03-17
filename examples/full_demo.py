@@ -6,7 +6,7 @@ For the real-framework integration demo, see examples/real_langgraph_demo.py.
 """
 
 print("=" * 60)
-print("  StateWeave v0.3.2 — Real End-to-End Demo")
+print("  StateWeave v0.3.3 — Real End-to-End Demo")
 print("=" * 60)
 print()
 
