@@ -1,0 +1,104 @@
+{
+  "name": "stateweave",
+  "version": "0.1.0",
+  "description": "Cross-framework cognitive state portability for AI agents. Export from LangGraph, DSPy, LlamaIndex, OpenAI Agents SDK, Haystack, Letta/MemGPT, Semantic Kernel, MCP, CrewAI, or AutoGen. Zero knowledge lost.",
+  "homepage": "https://stateweave.dev",
+  "repository": "https://github.com/GDWN-BLDR/stateweave",
+  "license": "Apache-2.0",
+  "tools": [
+    {
+      "name": "export_agent_state",
+      "description": "Export cognitive state from any supported framework (LangGraph, MCP, CrewAI, AutoGen, DSPy, LlamaIndex, OpenAI Agents SDK, Haystack, Letta, Semantic Kernel) into the Universal Schema format. Captures conversation history, working memory, goals, tool results, long-term memory, and episodic memory.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "framework": { "type": "string", "enum": ["langgraph", "mcp", "crewai", "autogen", "dspy", "llamaindex", "openai_agents", "haystack", "letta", "semantic_kernel"] },
+          "agent_id": { "type": "string" },
+          "encrypt": { "type": "boolean", "default": false }
+        },
+        "required": ["framework", "agent_id"]
+      }
+    },
+    {
+      "name": "import_agent_state",
+      "description": "Import a StateWeavePayload into a target framework with full validation. Non-portable elements are flagged with severity, reason, and remediation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target_framework": { "type": "string", "enum": ["langgraph", "mcp", "crewai", "autogen", "dspy", "llamaindex", "openai_agents", "haystack", "letta", "semantic_kernel"] },
+          "payload": { "type": "object" }
+        },
+        "required": ["target_framework", "payload"]
+      }
+    },
+    {
+      "name": "diff_agent_states",
+      "description": "Compare two agent state snapshots and return a detailed change report showing additions, removals, and modifications across all cognitive state fields.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "state_a": { "type": "object" },
+          "state_b": { "type": "object" }
+        },
+        "required": ["state_a", "state_b"]
+      }
+    },
+    {
+      "name": "detect_framework",
+      "description": "Auto-detect the source framework from a state blob. Analyzes keys and structure patterns to identify which framework produced the state with confidence scoring.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "state": { "type": "object", "description": "The state blob to analyze" },
+          "top_n": { "type": "integer", "default": 3 }
+        },
+        "required": ["state"]
+      }
+    },
+    {
+      "name": "validate_state",
+      "description": "Validate a StateWeave payload for schema compliance, field completeness, and importability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "payload": { "type": "object" }
+        },
+        "required": ["payload"]
+      }
+    },
+    {
+      "name": "generate_migration_report",
+      "description": "Generate a shareable migration report (HTML, Markdown, or JSON) with fidelity scoring, warnings table, and audit trail.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "source_payload": { "type": "object" },
+          "target_payload": { "type": "object" },
+          "format": { "type": "string", "enum": ["html", "markdown", "json"], "default": "markdown" }
+        },
+        "required": ["source_payload"]
+      }
+    }
+  ],
+  "resources": [
+    {
+      "uri": "stateweave://schemas/v1",
+      "name": "Universal Schema v1",
+      "description": "The canonical StateWeavePayload schema definition"
+    },
+    {
+      "uri": "stateweave://migrations/history",
+      "name": "Migration History",
+      "description": "Log of all migration operations with timestamps and audit trails"
+    },
+    {
+      "uri": "stateweave://agents/{id}/snapshot",
+      "name": "Agent State Snapshot",
+      "description": "Live cognitive state for a specific agent"
+    }
+  ],
+  "install": {
+    "pip": "pip install stateweave",
+    "python": "from stateweave.server import create_mcp_server"
+  }
+}

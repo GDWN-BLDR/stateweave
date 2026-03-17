@@ -1,10 +1,8 @@
 # StateWeave
 
-> Cross-framework cognitive state portability for AI agents.
+> `git` for agent brains — move, debug, and secure AI agent state across 10 frameworks.
 
-## What is StateWeave?
-
-StateWeave lets AI agents migrate between frameworks (LangGraph, MCP, CrewAI, AutoGen, DSPy, LlamaIndex, OpenAI Agents SDK, Haystack, Letta/MemGPT, Semantic Kernel) while preserving their accumulated knowledge — conversation history, working memory, goals, tool results, and trust parameters. Zero data loss. One API.
+StateWeave lets AI agents move between frameworks (LangGraph, MCP, CrewAI, AutoGen, DSPy, LlamaIndex, OpenAI Agents, Haystack, Letta, Semantic Kernel) while keeping their accumulated knowledge — conversation history, working memory, goals, tool results, and trust parameters.
 
 ## Install
 
@@ -15,160 +13,64 @@ pip install stateweave
 ## Quick Start
 
 ```python
-from stateweave.adapters import LangGraphAdapter, MCPAdapter
+from stateweave import LangGraphAdapter, MCPAdapter, diff_payloads
 
 # Export from LangGraph
-lg = LangGraphAdapter(checkpointer=my_checkpointer)
-payload = lg.export_state("my-agent")
+adapter = LangGraphAdapter()
+adapter._agents["my-agent"] = {
+    "messages": [
+        {"type": "human", "content": "What's the weather?"},
+        {"type": "ai", "content": "It's 72°F and sunny!"},
+    ],
+}
+payload = adapter.export_state("my-agent")
 
 # Import into MCP
 mcp = MCPAdapter()
 mcp.import_state(payload)
-# Done. All cognitive state preserved.
+
+# Re-export from MCP to compare
+mcp_payload = mcp.export_state("my-agent")
+diff = diff_payloads(payload, mcp_payload)
 ```
-
-## CLI
-
-```bash
-stateweave export langgraph agent-1 --encrypt -o state.sw.json
-stateweave import mcp state.sw.json
-stateweave diff state_v1.sw.json state_v2.sw.json
-stateweave detect state.json
-stateweave validate state.sw.json
-stateweave adapters
-stateweave generate-adapter my-framework
-```
-
-## Core Concepts
-
-- **Universal Schema**: Canonical format all frameworks translate to/from. Star topology (N adapters), not mesh (N² translations).
-- **StateWeavePayload**: Contains `cognitive_state` (conversation_history, working_memory, goal_tree, tool_results_cache, trust_parameters, long_term_memory, episodic_memory), `metadata`, `audit_trail`, and `non_portable_warnings`.
-- **Non-Portable State**: Framework-specific elements (credentials, DB connections) are never silently dropped. Each is documented with severity, reason, and remediation.
-- **Encryption**: AES-256-GCM with PBKDF2 key derivation (600K iterations). Unique nonce per operation.
-- **Auto-Detection**: `detect_framework(state_blob)` identifies the source framework with confidence scoring.
-- **Migration Reports**: Generate shareable HTML, Markdown, or JSON reports with fidelity scores.
 
 ## MCP Server
 
-StateWeave ships as an MCP Server with these tools:
+StateWeave ships as an MCP server. Add to your MCP config:
 
-- `export_agent_state` — Export cognitive state from any framework
-- `import_agent_state` — Import into target framework with validation
-- `diff_agent_states` — Compare two states, get a change report
-- `detect_framework` — Auto-detect source framework from state data
-- `validate_state` — Validate a StateWeave payload
-
-Resources: `stateweave://schemas/v1`, `stateweave://migrations/history`, `stateweave://agents/{id}/snapshot`
-
-## Supported Frameworks
-
-| Framework | Export | Import | Status |
-|-----------|--------|--------|--------|
-| LangGraph | ✓ | ✓ | Ready |
-| MCP | ✓ | ✓ | Ready |
-| CrewAI | ✓ | ✓ | Ready |
-| AutoGen | ✓ | ✓ | Ready |
-| DSPy | ✓ | ✓ | Ready |
-| LlamaIndex | ✓ | ✓ | Ready |
-| OpenAI Agents SDK | ✓ | ✓ | Ready |
-| Haystack | ✓ | ✓ | Ready |
-| Letta / MemGPT | ✓ | ✓ | Ready |
-| Semantic Kernel | ✓ | ✓ | Ready |
-| Custom | ✓ | ✓ | Extensible (subclass StateWeaveAdapter) |
-
-## Build a Custom Adapter
-
-```python
-from stateweave.adapters.base import StateWeaveAdapter
-
-class MyAdapter(StateWeaveAdapter):
-    @property
-    def framework_name(self) -> str:
-        return "my-framework"
-
-    def export_state(self, agent_id, **kwargs):
-        ...  # Framework state → Universal Schema
-
-    def import_state(self, payload, **kwargs):
-        ...  # Universal Schema → framework state
-
-    def list_agents(self):
-        ...  # Return discoverable agents
+```json
+{
+  "mcpServers": {
+    "stateweave": {
+      "command": "python3",
+      "args": ["-m", "stateweave.mcp_server"]
+    }
+  }
+}
 ```
 
-Or use the scaffold generator:
+### Tools
+- `export_agent_state` — Export cognitive state from any supported framework
+- `import_agent_state` — Import state into a target framework with validation
+- `diff_agent_states` — Compare two states and return a change report
 
-```bash
-stateweave generate-adapter my-framework
-# Creates adapter + tests + docs templates
-```
+### Resources
+- `stateweave://schemas/v1` — Universal Schema specification
+- `stateweave://migrations/history` — Migration history log
+- `stateweave://agents/{id}/snapshot` — Live agent state snapshot
 
-## Migration Recipes
-
-### LangGraph → DSPy
-```python
-from stateweave.adapters import LangGraphAdapter, DSPyAdapter
-
-lg = LangGraphAdapter(checkpointer=checkpointer)
-payload = lg.export_state("agent-thread-1")
-# payload includes conversation_history, working_memory, tool_results
-
-dspy = DSPyAdapter()
-result = dspy.import_state(payload)
-# Conversation history → demos, working memory → signature config
-```
-
-### OpenAI Agents SDK → Letta
-```python
-from stateweave.adapters import OpenAIAgentsAdapter, LettaAdapter
-
-oai = OpenAIAgentsAdapter(session=my_session)
-payload = oai.export_state("my-openai-agent")
-# Exports session messages, context, tool defs, handoff chains
-
-letta = LettaAdapter(client=letta_client)
-result = letta.import_state(payload, agent_id="new-letta-agent")
-# Messages → recall memory, context → core memory blocks
-```
-
-### Auto-Detect and Migrate
-```python
-from stateweave.core.detect import detect_framework
-from stateweave.adapters import ADAPTER_REGISTRY
-
-# Auto-detect source framework
-results = detect_framework("state.json")
-source_framework = results[0][0]  # e.g. "langgraph"
-
-# Export
-source = ADAPTER_REGISTRY[source_framework]()
-payload = source.export_state("agent-1")
-
-# Import into any target
-target = ADAPTER_REGISTRY["dspy"]()
-target.import_state(payload)
-```
-
-## FAQ
-
-**How do I migrate agent state between frameworks?**
-Use `export_state()` from the source adapter, then `import_state()` on the target adapter. All cognitive state transfers through the Universal Schema.
-
-**What happens to non-portable state?**
-Never silently dropped. Each element is flagged in `non_portable_warnings` with severity, reason, and remediation guidance.
-
-**Is state encrypted during transport?**
-Yes. AES-256-GCM with PBKDF2 (600K iterations). Unique nonce per operation. Credentials are stripped on export.
-
-**How do I add a new framework?**
-Run `stateweave generate-adapter my-framework` to scaffold the files. Then implement 4 methods. Your adapter gets instant migration paths to all 10 existing frameworks via the star topology.
-
-**How does auto-detection work?**
-`detect_framework()` analyzes state keys against signature patterns for all supported frameworks and returns confidence-ranked results.
+## Key Features
+- Agent time travel (checkpoint, rollback, branch, diff)
+- AES-256-GCM encryption with Ed25519 payload signing
+- 10 framework adapters (star topology — N adapters, not N² translations)
+- Smart auto-checkpoint middleware (every-N, delta-threshold, manual-only)
+- Delta state transport (send only changes)
+- State merge with CRDT conflict resolution
+- A2A protocol bridge
+- 12 UCE compliance scanners (serialization safety, import discipline, etc.)
+- 440+ tests
 
 ## Links
-
-- GitHub: https://github.com/GDWN-BLDR/stateweave
+- Source: https://github.com/GDWN-BLDR/stateweave
 - PyPI: https://pypi.org/project/stateweave/
 - License: Apache 2.0
-- MCP Manifest: https://stateweave.dev/.well-known/mcp.json
