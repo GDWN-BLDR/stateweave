@@ -60,13 +60,14 @@ StateWeave ships as an MCP server. Add to your MCP config:
 - `stateweave://agents/{id}/snapshot` — Live agent state snapshot
 
 ## Key Features
-- 10 framework adapters (star topology — N adapters, not N² translations)
+- Agent time travel (checkpoint, rollback, branch, diff)
 - AES-256-GCM encryption with Ed25519 payload signing
-- Agent time travel (checkpoint, rollback, branch)
+- 10 framework adapters (star topology — N adapters, not N² translations)
+- Smart auto-checkpoint middleware (every-N, delta-threshold, manual-only)
 - Delta state transport (send only changes)
 - State merge with CRDT conflict resolution
 - A2A protocol bridge
-- Auto-checkpoint middleware
+- 12 UCE compliance scanners (serialization safety, import discipline, etc.)
 - 440+ tests
 
 ## Links

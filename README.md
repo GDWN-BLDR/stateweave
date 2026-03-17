@@ -86,7 +86,7 @@ $ python examples/full_demo.py
 7/7 steps passed. Everything runs from PyPI.
 ```
 
-> Try it yourself: `pip install stateweave && python -c "from stateweave import LangGraphAdapter; print('Ready ✓')"`
+> Try it yourself: `pip install stateweave && python examples/quickstart.py` (quickstart) or `python examples/full_demo.py` (all 7 steps)
 
 ## Quick Start
 
@@ -259,7 +259,7 @@ Every agent's state is represented as a `StateWeavePayload`:
 
 ```python
 StateWeavePayload(
-    stateweave_version="0.3.1",
+    stateweave_version="0.3.2",
     source_framework="langgraph",
     exported_at=datetime,
     cognitive_state=CognitiveState(
@@ -485,7 +485,7 @@ stateweave generate-adapter my-framework --output-dir ./adapters
 
 ## Compliance (UCE)
 
-StateWeave enforces its own architectural standards via the **Universal Compliance Engine** — 10 automated scanners that run on every commit:
+StateWeave enforces its own architectural standards via the **Universal Compliance Engine** — 12 automated scanners that run on every commit:
 
 | Scanner | What It Checks | Mode |
 |---------|---------------|------|
@@ -499,6 +499,8 @@ StateWeave enforces its own architectural standards via the **Universal Complian
 | `test_coverage_gate` | Minimum test file coverage ratio | BLOCK |
 | `file_architecture` | No orphan files outside MANIFEST | WARN |
 | `dependency_cycles` | No circular imports | BLOCK |
+| `adapter_isolation` | Adapters cannot import across isolation boundaries | BLOCK |
+| `ruff_quality` | Ruff formatting standards enforced | BLOCK |
 
 ```bash
 # Run UCE locally
@@ -575,19 +577,6 @@ Add the badge to your project's README:
 ```
 
 [![StateWeave](https://img.shields.io/badge/state-StateWeave-7c3aed)](https://github.com/GDWN-BLDR/stateweave)
-
-## What StateWeave Replaces
-
-Without StateWeave, migrating agent state between frameworks means:
-
-| Task | DIY | StateWeave |
-|------|-----|------------|
-| Serialize state between frameworks | Write custom code per pair (N² effort) | `adapter.export_state()` / `import_state()` |
-| Strip credentials before export | Manual — easy to miss, leaks secrets | Auto-stripped with warnings |
-| Roll back if migration fails | No undo — restart from scratch | `checkpoint_store.rollback()` |
-| Track what was lost in translation | Hope you remember | `non_portable_warnings[]` |
-| Encrypt state for transit | DIY crypto (dangerous) | AES-256-GCM + Ed25519 built-in |
-| Audit what the agent did | Build your own logging | Versioned, signed audit trail |
 
 ## License
 

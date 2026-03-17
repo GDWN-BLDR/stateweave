@@ -1,9 +1,12 @@
 """
-StateWeave Real Demo — pip install stateweave → 7 steps, zero mocks
+StateWeave Real Demo — pip install stateweave → 7 steps
+
+Works without langgraph installed (uses dict-based adapter mode).
+For the real-framework integration demo, see examples/real_langgraph_demo.py.
 """
 
 print("=" * 60)
-print("  StateWeave v0.3.1 — Real End-to-End Demo")
+print("  StateWeave v0.3.2 — Real End-to-End Demo")
 print("=" * 60)
 print()
 

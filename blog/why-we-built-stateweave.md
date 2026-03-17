@@ -1,4 +1,4 @@
-# Why We Built StateWeave: `git` for Agent Brains
+# Why I Built StateWeave: `git` for Agent Brains
 
 *March 2026*
 
@@ -16,7 +16,7 @@ You start over. Two hundred conversations of accumulated context — gone.
 
 ## Why JSON.dumps() Doesn't Cut It
 
-The obvious answer is "just serialize to JSON." We tried that. Here's what we discovered:
+The obvious answer is "just serialize to JSON." I tried that. Here's what I discovered:
 
 1. **Framework state structures are incompatible.** LangGraph stores messages as `HumanMessage` / `AIMessage` objects with tool call metadata. CrewAI uses `TaskOutput` with agent attribution. MCP has its own resource/tool model. You can't just JSON-dump one and load it into another.
 
@@ -43,7 +43,7 @@ The schema captures what agents actually think about:
 - **Trust parameters** — confidence scores, delegation limits
 - **Tool results cache** — expensive computations the agent shouldn't repeat
 
-## What We Actually Built
+## What I Actually Built
 
 StateWeave is a Python library (`pip install stateweave`) that does three things:
 
@@ -65,11 +65,11 @@ Three lines. The agent's memories transfer.
 from stateweave.core.timetravel import CheckpointStore
 
 store = CheckpointStore()
-store.checkpoint(payload, message="before risky operation")
+store.checkpoint(payload, label="before risky operation")
 
 # ... operation goes wrong ...
 
-payload = store.rollback()  # back to safety
+restored = store.rollback("my-agent", version=1)  # back to safety
 ```
 
 Every checkpoint is content-addressed (SHA-256), has parent hash chains, and supports branching — like git for agent state.
@@ -77,26 +77,25 @@ Every checkpoint is content-addressed (SHA-256), has parent hash chains, and sup
 ### 3. Security
 ```python
 from stateweave.core.encryption import EncryptionFacade
-from stateweave.core.signing import sign_payload, generate_keypair
 
 # Encrypt with a passphrase (AES-256-GCM + PBKDF2)
 facade = EncryptionFacade.from_passphrase("enterprise-key")
 ciphertext, nonce = facade.encrypt(serialized_bytes)
 
 # Sign for audit compliance (Ed25519)
-private_key, public_key = generate_keypair()
-signature = sign_payload(payload, private_key)
+private_key, public_key = EncryptionFacade.generate_signing_keypair()
+signature = EncryptionFacade.sign(payload_bytes, private_key)
 ```
 
 AES-256-GCM encryption. Ed25519 signing. PBKDF2 key derivation with 600K iterations. Credentials are auto-stripped on export with explicit `non_portable_warnings`.
 
 ## What's Next
 
-StateWeave currently supports 10 frameworks (LangGraph, MCP, CrewAI, AutoGen, DSPy, LlamaIndex, OpenAI Agents, Haystack, Letta, and Semantic Kernel). Our highest-priority work is:
+StateWeave currently supports 10 frameworks (LangGraph, MCP, CrewAI, AutoGen, DSPy, LlamaIndex, OpenAI Agents, Haystack, Letta, and Semantic Kernel). My highest-priority work is:
 
 1. **Community adapters** — making it trivial for anyone to add framework #11
-2. **Deeper framework integrations** — the LangGraph adapter has real integration tests; we're extending that rigor to all Tier 1 adapters
-3. **Real-world stress testing** — we need teams to break it on production workloads
+2. **Deeper framework integrations** — the LangGraph adapter has real integration tests; I'm extending that rigor to all Tier 1 adapters
+3. **Real-world stress testing** — I need teams to break it on production workloads
 
 ## Try It
 
@@ -110,4 +109,4 @@ stateweave doctor
 
 ---
 
-*StateWeave is built by [Pantoll Ventures](https://pantollventures.com). We believe agent intelligence should be portable, auditable, and never lost.*
+*StateWeave is built by [Pantoll Ventures](https://pantollventures.com). I believe agent intelligence should be portable, auditable, and never lost.*

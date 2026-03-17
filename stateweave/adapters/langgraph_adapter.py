@@ -43,7 +43,7 @@ except ImportError:
 logger = logging.getLogger("stateweave.adapters.langgraph")
 
 # LangGraph version this adapter targets
-LANGGRAPH_TARGET_VERSION = "1.0.x"
+LANGGRAPH_TARGET_VERSION = "0.2.x"
 
 # Message role mapping: LangGraph type names -> Universal Schema roles
 LANGGRAPH_ROLE_MAP: Dict[str, MessageRole] = {
