@@ -379,6 +379,24 @@ def phase_code_hygiene():
         content = init_file.read_text()
         check("__init__.py has __version__", "__version__" in content)
 
+    # Check for sensitive directories leaked into git despite .gitignore
+    sensitive_dirs = ["board/", "breakdown/", "research/", "content/", ".agent/", "website/", "blog/"]
+    try:
+        tracked = subprocess.run(
+            ["git", "ls-files", "--cached"],
+            capture_output=True, text=True, cwd=str(REPO_ROOT), timeout=10,
+        )
+        if tracked.returncode == 0:
+            leaked = []
+            for sd in sensitive_dirs:
+                leaked_files = [f for f in tracked.stdout.splitlines() if f.startswith(sd)]
+                if leaked_files:
+                    leaked.append(f"{sd} ({len(leaked_files)} files)")
+            check("No sensitive dirs tracked in git", len(leaked) == 0,
+                  "; ".join(leaked) if leaked else "board/, breakdown/, .agent/, website/ all clean")
+    except Exception:
+        warn("Could not check git tracked files")
+
 
 # ─── Phase 8: Asset Integrity ────────────────────────────
 def phase_assets():
