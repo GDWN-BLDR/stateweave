@@ -50,7 +50,7 @@ StateWeave solves three critical problems in the AI agent ecosystem:
 ### See it working
 
 <p align="center">
-  <img src="assets/demo.webp" alt="StateWeave demo — export, import, diff, time travel, encrypt from pip install" width="700">
+  <img src="assets/demo.gif" alt="StateWeave demo — export, import, diff, time travel, encrypt from pip install" width="700">
 </p>
 
 ```
