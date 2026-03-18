@@ -48,6 +48,7 @@ board/
 breakdown/
 research/
 content/
+.agent/
 
 # Private assets (not for public repo)
 website/
