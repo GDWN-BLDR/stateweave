@@ -49,6 +49,8 @@ breakdown/
 research/
 content/
 .agent/
+.agents/
+.stateweave/
 
 # Private assets (not for public repo)
 website/

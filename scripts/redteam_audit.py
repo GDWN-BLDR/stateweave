@@ -380,7 +380,7 @@ def phase_code_hygiene():
         check("__init__.py has __version__", "__version__" in content)
 
     # Check for sensitive directories leaked into git despite .gitignore
-    sensitive_dirs = ["board/", "breakdown/", "research/", "content/", ".agent/", "website/", "blog/"]
+    sensitive_dirs = ["board/", "breakdown/", "research/", "content/", ".agent/", ".agents/", ".stateweave/", "website/", "blog/"]
     try:
         tracked = subprocess.run(
             ["git", "ls-files", "--cached"],
