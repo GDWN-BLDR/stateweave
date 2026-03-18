@@ -383,15 +383,17 @@ def phase_code_hygiene():
 # ─── Phase 8: Asset Integrity ────────────────────────────
 def phase_assets():
     print("\n━━ Phase 8: Asset Integrity ━━")
-    demo = REPO_ROOT / "assets" / "demo.webp"
-    check("Demo asset exists (assets/demo.webp)", demo.exists(),
-          f"{demo.stat().st_size:,} bytes" if demo.exists() else "missing")
+    demo_gif = REPO_ROOT / "assets" / "demo.gif"
+    demo_webp = REPO_ROOT / "assets" / "demo.webp"
+    demo = demo_gif if demo_gif.exists() else demo_webp
+    check("Demo asset exists", demo.exists(),
+          f"{demo.name} — {demo.stat().st_size:,} bytes" if demo.exists() else "missing")
 
     og = REPO_ROOT / "examples" / "full_demo.py"
     check("Full demo script exists (examples/full_demo.py)", og.exists())
 
     readme = (REPO_ROOT / "README.md").read_text(errors="replace")
-    check("README references demo asset", "assets/demo.webp" in readme)
+    check("README references demo asset", "assets/demo.gif" in readme or "assets/demo.webp" in readme)
     check("README references full_demo.py", "full_demo.py" in readme)
 
 
@@ -580,7 +582,7 @@ def phase_persona_scorecards():
 
     # Persona 1: Skeptical HN Commenter
     p1_scores = {}
-    p1_scores["demo_proof"] = 5 if (REPO_ROOT / "assets" / "demo.webp").exists() else 1
+    p1_scores["demo_proof"] = 5 if (REPO_ROOT / "assets" / "demo.gif").exists() or (REPO_ROOT / "assets" / "demo.webp").exists() else 1
     p1_scores["test_badge"] = 5 if extracted_data.get("tests_code", 0) >= 400 else 2
     p1_scores["honest_framing"] = 5  # Earned if no stale copy and tagline is canonical
     if any(r["status"] == "fail" and "Stale" in r["name"] for r in results):
