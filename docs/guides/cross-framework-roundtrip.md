@@ -4,7 +4,7 @@ Migrate agent state through multiple frameworks to prove portability.
 
 ## 4-Framework Chain
 
-This example migrates state through all 4 Tier-1 frameworks: AutoGen → MCP → LangGraph → CrewAI.
+This example migrates state through all 4 Tier-1 frameworks: AutoGen → MCP → LangGraph → CrewAI. StateWeave supports 10 frameworks total.
 
 ```python
 from stateweave import (
