@@ -90,6 +90,25 @@ $ python examples/full_demo.py
 >
 > Or run the full 7-step demo: `python examples/full_demo.py`
 
+### One-Line Auto-Instrumentation
+
+```python
+import stateweave
+stateweave.auto()  # That's it. Auto-checkpoint + confidence alerts + session summary.
+```
+
+### git-Style CLI
+
+```bash
+stateweave log my-agent           # Beautiful checkpoint history with confidence sparkline
+stateweave blame my-agent confidence  # Which checkpoint changed confidence? Value history.
+stateweave stash my-agent         # Save current state (like git stash)
+stateweave pop my-agent           # Restore stashed state
+stateweave replay my-agent        # Step-by-step state debugger
+stateweave watch                  # Live agent health dashboard (htop for agent brains)
+stateweave ci my-agent            # CI regression detection — exits non-zero on failure
+```
+
 ## Quick Start
 
 ### Install

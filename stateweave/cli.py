@@ -1017,6 +1017,257 @@ def cmd_compare(args):
     print("═" * 60)
 
 
+def cmd_log(args):
+    """Beautiful one-line checkpoint history — like `git log --oneline`.
+
+    Shows every checkpoint with version, timestamp, label, message count,
+    confidence, and a visual summary.
+    """
+    from datetime import datetime
+
+    from stateweave.core.timetravel import CheckpointStore
+
+    store_dir = args.store_dir if hasattr(args, "store_dir") and args.store_dir else None
+    store = CheckpointStore(store_dir=store_dir)
+
+    agent_id = args.agent_id
+    history = store.history(agent_id)
+
+    if not history.checkpoints:
+        print(f"⚠ No checkpoints for '{agent_id}'")
+        return
+
+    sorted_cps = sorted(history.checkpoints, key=lambda c: c.version, reverse=True)
+    limit = getattr(args, "limit", 20) or 20
+
+    print()
+    print(f"📜 {agent_id} — {len(sorted_cps)} checkpoint(s)")
+    print()
+
+    now = datetime.utcnow()
+
+    for cp in sorted_cps[:limit]:
+        # Time ago
+        try:
+            cp_time = datetime.fromisoformat(cp.created_at)
+            delta = now - cp_time
+            if delta.total_seconds() < 60:
+                t = f"{int(delta.total_seconds())}s"
+            elif delta.total_seconds() < 3600:
+                t = f"{int(delta.total_seconds() / 60)}m"
+            elif delta.total_seconds() < 86400:
+                t = f"{int(delta.total_seconds() / 3600)}h"
+            else:
+                t = f"{int(delta.total_seconds() / 86400)}d"
+        except Exception:
+            t = "?"
+
+        # Confidence from payload
+        conf_str = ""
+        try:
+            payload = store._load_payload(agent_id, cp.version)
+            if payload:
+                wm = payload.cognitive_state.working_memory
+                for key in ("confidence", "confidence_score", "agent_confidence"):
+                    if key in wm:
+                        try:
+                            conf = float(wm[key])
+                            bar_len = int(conf * 10)
+                            bar = "█" * bar_len + "░" * (10 - bar_len)
+                            icon = "🟢" if conf >= 0.7 else "🟡" if conf >= 0.4 else "🔴"
+                            conf_str = f" {icon} {bar} {conf:.0%}"
+                        except (ValueError, TypeError):
+                            pass
+                        break
+        except Exception:
+            pass
+
+        # Hash (short)
+        short_hash = cp.hash[:7] if cp.hash else "0000000"
+        label = cp.label or "unlabeled"
+
+        print(
+            f"  {short_hash} v{cp.version:<3}"
+            f"  {label:<20}"
+            f"  📝{cp.message_count:>2} 🧠{cp.working_memory_keys:>2}"
+            f"{conf_str}"
+            f"  ({t} ago)"
+        )
+
+    if len(sorted_cps) > limit:
+        print(f"\n  ... and {len(sorted_cps) - limit} more (use --limit)")
+
+    print()
+
+
+def cmd_blame(args):
+    """Show which checkpoint introduced a specific working memory key.
+
+    Like `git blame` — traces when a piece of agent knowledge first appeared,
+    was last changed, and shows its value history.
+    """
+    from stateweave.core.timetravel import CheckpointStore
+
+    store_dir = args.store_dir if hasattr(args, "store_dir") and args.store_dir else None
+    store = CheckpointStore(store_dir=store_dir)
+
+    agent_id = args.agent_id
+    key = args.key
+    history = store.history(agent_id)
+
+    if not history.checkpoints:
+        print(f"⚠ No checkpoints for '{agent_id}'")
+        return
+
+    sorted_cps = sorted(history.checkpoints, key=lambda c: c.version)
+
+    print()
+    print(f"🔍 Blame: {agent_id} → {key}")
+    print("═" * 60)
+
+    introduced_at = None
+    last_changed_at = None
+    prev_value = None
+    value_history = []
+
+    for cp in sorted_cps:
+        try:
+            payload = store._load_payload(agent_id, cp.version)
+            if payload is None:
+                continue
+        except Exception:
+            continue
+
+        wm = payload.cognitive_state.working_memory
+        current_value = wm.get(key)
+
+        if current_value is not None:
+            if introduced_at is None:
+                introduced_at = cp.version
+                value_history.append((cp.version, cp.label, current_value))
+
+            if prev_value is not None and current_value != prev_value:
+                last_changed_at = cp.version
+                value_history.append((cp.version, cp.label, current_value))
+
+            prev_value = current_value
+        elif prev_value is not None:
+            # Key was removed
+            value_history.append((cp.version, cp.label, "[REMOVED]"))
+            prev_value = None
+
+    if introduced_at is None:
+        print(f"  Key '{key}' not found in any checkpoint")
+        return
+
+    print(f"  Key:          {key}")
+    print(f"  Introduced:   v{introduced_at}")
+    if last_changed_at:
+        print(f"  Last changed: v{last_changed_at}")
+    print(f"  Current:      {str(prev_value)[:60]}")
+    print()
+
+    if len(value_history) > 1:
+        print("  History:")
+        for v, label, val in value_history:
+            val_str = str(val)[:50]
+            label_str = f" ({label})" if label else ""
+            print(f"    v{v}{label_str}: {val_str}")
+
+    print("═" * 60)
+
+
+def cmd_stash(args):
+    """Save current agent state to a named stash — like `git stash`.
+
+    Saves a labeled snapshot that can be restored later with `stateweave pop`.
+    """
+    import json
+
+    from stateweave.core.timetravel import CheckpointStore
+
+    store_dir = args.store_dir if hasattr(args, "store_dir") and args.store_dir else None
+    store = CheckpointStore(store_dir=store_dir)
+
+    agent_id = args.agent_id
+    stash_name = getattr(args, "name", None) or "default"
+    history = store.history(agent_id)
+
+    if not history.checkpoints or history.latest is None:
+        print(f"⚠ No checkpoints for '{agent_id}'")
+        return
+
+    # Save stash reference
+    stash_dir = store._root / ".stash"
+    stash_dir.mkdir(parents=True, exist_ok=True)
+
+    stash_file = stash_dir / f"{agent_id}_{stash_name}.json"
+    stash_data = {
+        "agent_id": agent_id,
+        "stash_name": stash_name,
+        "version": history.latest.version,
+        "label": history.latest.label,
+        "message_count": history.latest.message_count,
+        "working_memory_keys": history.latest.working_memory_keys,
+    }
+
+    stash_file.write_text(json.dumps(stash_data, indent=2))
+
+    print(f"📦 Stashed '{agent_id}' at v{history.latest.version} as '{stash_name}'")
+    print(f"   Messages: {history.latest.message_count}")
+    print(f"   Memory:   {history.latest.working_memory_keys} keys")
+    print(f"   Restore:  stateweave pop {agent_id} --name {stash_name}")
+
+
+def cmd_pop(args):
+    """Restore a stashed agent state — like `git stash pop`.
+
+    Restores the state saved by `stateweave stash`, rolling back to that version.
+    """
+    import json
+
+    from stateweave.core.timetravel import CheckpointStore
+
+    store_dir = args.store_dir if hasattr(args, "store_dir") and args.store_dir else None
+    store = CheckpointStore(store_dir=store_dir)
+
+    agent_id = args.agent_id
+    stash_name = getattr(args, "name", None) or "default"
+
+    stash_dir = store._root / ".stash"
+    stash_file = stash_dir / f"{agent_id}_{stash_name}.json"
+
+    if not stash_file.exists():
+        print(f"⚠ No stash '{stash_name}' for '{agent_id}'")
+
+        # List available stashes
+        if stash_dir.exists():
+            stashes = list(stash_dir.glob(f"{agent_id}_*.json"))
+            if stashes:
+                print("  Available stashes:")
+                for s in stashes:
+                    name = s.stem.replace(f"{agent_id}_", "")
+                    print(f"    - {name}")
+        return
+
+    stash_data = json.loads(stash_file.read_text())
+    version = stash_data["version"]
+
+    try:
+        restored = store.rollback(agent_id, version=version)
+    except Exception as e:
+        print(f"⚠ Could not restore: {e}")
+        return
+
+    print(f"📦 Popped '{stash_name}' → restored {agent_id} to v{version}")
+    print(f"   Messages: {len(restored.cognitive_state.conversation_history)}")
+    print(f"   Memory:   {len(restored.cognitive_state.working_memory)} keys")
+
+    # Clean up stash file
+    stash_file.unlink()
+    print(f"   Stash '{stash_name}' removed")
+
+
 def cmd_watch(args):
     """Live agent state dashboard — refreshes every N seconds.
 
@@ -1537,6 +1788,44 @@ def main():
         help="Checkpoint store directory",
     )
 
+    # log
+    log_parser = subparsers.add_parser(
+        "log",
+        help="Beautiful one-line checkpoint history (like git log --oneline)",
+    )
+    log_parser.add_argument("agent_id", help="Agent to show history for")
+    log_parser.add_argument(
+        "--limit", "-n", type=int, default=20, help="Max entries to show (default: 20)"
+    )
+    log_parser.add_argument("--store-dir", default=None, help="Checkpoint store directory")
+
+    # blame
+    blame_parser = subparsers.add_parser(
+        "blame",
+        help="Show which checkpoint introduced a memory key (like git blame)",
+    )
+    blame_parser.add_argument("agent_id", help="Agent to inspect")
+    blame_parser.add_argument("key", help="Working memory key to trace")
+    blame_parser.add_argument("--store-dir", default=None, help="Checkpoint store directory")
+
+    # stash
+    stash_parser = subparsers.add_parser(
+        "stash",
+        help="Save current agent state to a named stash (like git stash)",
+    )
+    stash_parser.add_argument("agent_id", help="Agent to stash")
+    stash_parser.add_argument("--name", default="default", help="Stash name (default: default)")
+    stash_parser.add_argument("--store-dir", default=None, help="Checkpoint store directory")
+
+    # pop
+    pop_parser = subparsers.add_parser(
+        "pop",
+        help="Restore a stashed agent state (like git stash pop)",
+    )
+    pop_parser.add_argument("agent_id", help="Agent to restore")
+    pop_parser.add_argument("--name", default="default", help="Stash name (default: default)")
+    pop_parser.add_argument("--store-dir", default=None, help="Checkpoint store directory")
+
     args = parser.parse_args()
 
     if args.command == "version":
@@ -1583,6 +1872,14 @@ def main():
         cmd_watch(args)
     elif args.command == "ci":
         cmd_ci(args)
+    elif args.command == "log":
+        cmd_log(args)
+    elif args.command == "blame":
+        cmd_blame(args)
+    elif args.command == "stash":
+        cmd_stash(args)
+    elif args.command == "pop":
+        cmd_pop(args)
     else:
         parser.print_help()
         sys.exit(1)

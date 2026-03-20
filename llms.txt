@@ -32,6 +32,13 @@ store.checkpoint(payload, label="after analysis")
 print(store.diff_versions("my-agent", 1, 2).to_report())
 ```
 
+## One-Line Auto-Instrumentation
+
+```python
+import stateweave
+stateweave.auto()  # Auto-checkpoint + confidence alerts. That's it.
+```
+
 ## MCP Server
 
 StateWeave ships as an MCP server. Add to your MCP config:
@@ -58,7 +65,11 @@ StateWeave ships as an MCP server. Add to your MCP config:
 - `stateweave://agents/{id}/snapshot` — Live agent state snapshot
 
 ## Key Features
+- One-line auto-instrumentation (`stateweave.auto()` — like Sentry for agents)
 - Agent time travel (checkpoint, rollback, branch, diff)
+- git-style CLI: `log`, `blame`, `stash`, `pop`, `replay`, `status`, `compare`
+- Live agent dashboard (`stateweave watch`)
+- CI regression detection (`stateweave ci` — exits non-zero on behavior regression)
 - AES-256-GCM encryption with Ed25519 payload signing
 - 10 framework adapters (star topology — N adapters, not N² translations)
 - Smart auto-checkpoint middleware (every-N, delta-threshold, manual-only)
@@ -66,7 +77,8 @@ StateWeave ships as an MCP server. Add to your MCP config:
 - State merge with CRDT conflict resolution
 - A2A protocol bridge
 - 12 UCE compliance scanners (serialization safety, import discipline, etc.)
-- 490+ tests
+- GitHub Action template for CI integration
+- 520+ tests
 
 ## Links
 - Source: https://github.com/GDWN-BLDR/stateweave

@@ -1,0 +1,64 @@
+# StateWeave CI/CD Integration
+#
+# Verify agent behavior hasn't regressed on every PR.
+# Add this to your repo at .github/workflows/stateweave-ci.yml
+#
+# How it works:
+#   1. Your agent runs and checkpoints state during tests
+#   2. `stateweave ci` compares the latest state against a baseline
+#   3. If confidence drops, messages are lost, or hallucination risk
+#      appears, the workflow fails — blocking the PR
+#
+# Requirements:
+#   - Your test suite must produce .stateweave/ checkpoints
+#   - Set STATEWEAVE_STORE_DIR to your checkpoint location
+
+name: StateWeave Agent Verification
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  verify-agent-behavior:
+    name: 🧶 Verify Agent State
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install stateweave
+          pip install -r requirements.txt  # your project deps
+
+      - name: Run agent tests (produces checkpoints)
+        run: |
+          python -m pytest tests/ -q
+        env:
+          STATEWEAVE_STORE_DIR: .stateweave/checkpoints
+
+      - name: Verify agent behavior
+        run: |
+          # Check each tracked agent for regressions
+          for agent_dir in .stateweave/checkpoints/*/; do
+            agent_id=$(basename "$agent_dir")
+            echo "🔍 Checking $agent_id..."
+            stateweave ci "$agent_id" --max-changes 20
+          done
+
+      - name: Agent state log
+        if: always()
+        run: |
+          for agent_dir in .stateweave/checkpoints/*/; do
+            agent_id=$(basename "$agent_dir")
+            echo "📜 $agent_id history:"
+            stateweave log "$agent_id" --limit 5
+          done
