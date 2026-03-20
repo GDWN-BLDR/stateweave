@@ -12,8 +12,14 @@ from typing import Any, Dict, List, Optional
 
 from stateweave.adapters.autogen_adapter import AutoGenAdapter
 from stateweave.adapters.crewai_adapter import CrewAIAdapter
+from stateweave.adapters.dspy_adapter import DSPyAdapter
+from stateweave.adapters.haystack_adapter import HaystackAdapter
 from stateweave.adapters.langgraph_adapter import LangGraphAdapter
+from stateweave.adapters.letta_adapter import LettaAdapter
+from stateweave.adapters.llamaindex_adapter import LlamaIndexAdapter
 from stateweave.adapters.mcp_adapter import MCPAdapter
+from stateweave.adapters.openai_agents_adapter import OpenAIAgentsAdapter
+from stateweave.adapters.semantic_kernel_adapter import SemanticKernelAdapter
 from stateweave.core.diff import diff_payloads
 from stateweave.core.migration import MigrationEngine
 from stateweave.core.serializer import StateWeaveSerializer
@@ -29,6 +35,12 @@ _adapters: Dict[str, Any] = {
     "mcp": MCPAdapter(),
     "crewai": CrewAIAdapter(),
     "autogen": AutoGenAdapter(),
+    "dspy": DSPyAdapter(),
+    "llamaindex": LlamaIndexAdapter(),
+    "openai_agents": OpenAIAgentsAdapter(),
+    "haystack": HaystackAdapter(),
+    "letta": LettaAdapter(),
+    "semantic_kernel": SemanticKernelAdapter(),
 }
 
 
@@ -53,7 +65,9 @@ async def export_agent_state(
     Universal Schema format.
 
     Args:
-        framework: Source framework name ("langgraph", "mcp", "crewai", "autogen").
+        framework: Source framework name (one of: "langgraph", "mcp", "crewai",
+            "autogen", "dspy", "llamaindex", "openai_agents", "haystack",
+            "letta", "semantic_kernel").
         agent_id: Identifier of the agent to export.
         encrypt: Whether to encrypt the exported payload (AES-256-GCM).
 
@@ -116,7 +130,9 @@ async def import_agent_state(
     translates it into the target framework's native representation.
 
     Args:
-        target_framework: Target framework name ("langgraph", "mcp", "crewai", "autogen").
+        target_framework: Target framework name (one of: "langgraph", "mcp",
+            "crewai", "autogen", "dspy", "llamaindex", "openai_agents",
+            "haystack", "letta", "semantic_kernel").
         payload: The StateWeavePayload as a JSON dict.
         agent_id: Optional override for the target agent ID.
 

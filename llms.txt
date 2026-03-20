@@ -13,25 +13,23 @@ pip install stateweave
 ## Quick Start
 
 ```python
-from stateweave import LangGraphAdapter, MCPAdapter, diff_payloads
+from stateweave import LangGraphAdapter, MCPAdapter
+from stateweave.core.timetravel import CheckpointStore
 
-# Export from LangGraph
-adapter = LangGraphAdapter()
-adapter._agents["my-agent"] = {
-    "messages": [
-        {"type": "human", "content": "What's the weather?"},
-        {"type": "ai", "content": "It's 72°F and sunny!"},
-    ],
-}
-payload = adapter.export_state("my-agent")
+# Create a sample agent state (no frameworks needed)
+payload = LangGraphAdapter().create_sample_payload("my-agent")
 
-# Import into MCP
-mcp = MCPAdapter()
-mcp.import_state(payload)
+# Checkpoint it (like git commit for agent brains)
+store = CheckpointStore()
+store.checkpoint(payload, label="initial state")
 
-# Re-export from MCP to compare
-mcp_payload = mcp.export_state("my-agent")
-diff = diff_payloads(payload, mcp_payload)
+# Migrate to a different framework
+MCPAdapter().import_state(payload)
+
+# Modify state, checkpoint again, then diff
+payload.cognitive_state.working_memory["new_insight"] = "Q4 trending up"
+store.checkpoint(payload, label="after analysis")
+print(store.diff_versions("my-agent", 1, 2).to_report())
 ```
 
 ## MCP Server

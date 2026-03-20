@@ -311,6 +311,137 @@ def cmd_doctor(args):
     print(report.format())
 
 
+def cmd_why(args):
+    """Analyze an agent's checkpoint history to explain what happened.
+
+    Produces an autopsy-style report showing what changed at each step,
+    highlighting the most significant state transitions.
+    """
+    from stateweave.core.timetravel import CheckpointStore
+
+    store = CheckpointStore(
+        store_dir=args.store_dir if hasattr(args, "store_dir") and args.store_dir else None
+    )
+
+    # Load history
+    history = store.history(args.agent_id)
+
+    if not history.checkpoints:
+        print(f"No checkpoints found for agent '{args.agent_id}'")
+        print()
+        agents = store.list_agents()
+        if agents:
+            print(f"Available agents: {', '.join(agents)}")
+        else:
+            print("No agents have been checkpointed yet.")
+            print("Use: stateweave checkpoint state.json")
+        sys.exit(1)
+
+    print("🔍 StateWeave Autopsy")
+    print("═" * 60)
+    print(f"  Agent:       {args.agent_id}")
+    print(f"  Checkpoints: {history.version_count}")
+    print(f"  Branches:    {', '.join(history.branches.keys())}")
+
+    latest = history.latest
+    if latest:
+        print(f"  Latest:      v{latest.version} ({latest.created_at[:19]})")
+        print(f"  Messages:    {latest.message_count}")
+        print(f"  Memory keys: {latest.working_memory_keys}")
+    print()
+
+    # Analyze consecutive diffs
+    if history.version_count < 2:
+        print("  Only 1 checkpoint — nothing to compare.")
+        print("  Create more checkpoints to see state evolution.")
+        print("═" * 60)
+        return
+
+    print("📊 State Evolution")
+    print("─" * 60)
+
+    sorted_cps = sorted(history.checkpoints, key=lambda c: c.version)
+    significant_changes = []
+
+    for i in range(1, len(sorted_cps)):
+        prev_cp = sorted_cps[i - 1]
+        curr_cp = sorted_cps[i]
+
+        try:
+            diff = store.diff_versions(args.agent_id, prev_cp.version, curr_cp.version)
+        except (ValueError, Exception) as e:
+            print(f"  v{prev_cp.version} → v{curr_cp.version}: ⚠ Could not diff ({e})")
+            continue
+
+        # Summarize changes
+        change_icon = "📝" if diff.has_changes else "✅"
+        delta_msgs = curr_cp.message_count - prev_cp.message_count
+        delta_mem = curr_cp.working_memory_keys - prev_cp.working_memory_keys
+
+        parts = []
+        if delta_msgs:
+            parts.append(f"msgs {'+' if delta_msgs > 0 else ''}{delta_msgs}")
+        if delta_mem:
+            parts.append(f"mem {'+' if delta_mem > 0 else ''}{delta_mem}")
+        if diff.added_count:
+            parts.append(f"+{diff.added_count} added")
+        if diff.removed_count:
+            parts.append(f"-{diff.removed_count} removed")
+        if diff.modified_count:
+            parts.append(f"~{diff.modified_count} modified")
+
+        label = f" — {curr_cp.label}" if curr_cp.label else ""
+        delta_str = f" ({', '.join(parts)})" if parts else ""
+
+        print(f"  {change_icon} v{prev_cp.version} → v{curr_cp.version}{label}{delta_str}")
+
+        # Show individual diff entries for detail
+        if diff.has_changes and args.verbose:
+            for entry in diff.entries[:10]:  # Cap at 10 per transition
+                print(f"       {entry}")
+            if len(diff.entries) > 10:
+                print(f"       ... and {len(diff.entries) - 10} more changes")
+
+        if diff.has_changes:
+            significant_changes.append(
+                {
+                    "from_v": prev_cp.version,
+                    "to_v": curr_cp.version,
+                    "label": curr_cp.label,
+                    "changes": len(diff.entries),
+                    "added": diff.added_count,
+                    "removed": diff.removed_count,
+                    "modified": diff.modified_count,
+                }
+            )
+
+    print()
+
+    # Show diagnosis
+    if significant_changes:
+        biggest = max(significant_changes, key=lambda c: c["changes"])
+        print("🩺 Diagnosis")
+        print("─" * 60)
+        print(
+            f"  Biggest change: v{biggest['from_v']} → v{biggest['to_v']} ({biggest['changes']} changes)"
+        )
+        if biggest.get("label"):
+            print(f"  Label: {biggest['label']}")
+        print(
+            f"  Breakdown: +{biggest['added']} added, -{biggest['removed']} removed, ~{biggest['modified']} modified"
+        )
+        print()
+        print("  💡 Recommendations:")
+        print(
+            f"     • Run: stateweave diff <v{biggest['from_v']}.json> <v{biggest['to_v']}.json> for full details"
+        )
+        print(f"     • Run: stateweave rollback {args.agent_id} {biggest['from_v']} to revert")
+    else:
+        print("  ✅ No significant state changes detected.")
+
+    print("═" * 60)
+
+
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
@@ -412,6 +543,20 @@ def main():
     # doctor
     subparsers.add_parser("doctor", help="Run diagnostic health checks")
 
+    # why
+    why_parser = subparsers.add_parser(
+        "why",
+        help="Analyze an agent's checkpoint history — autopsy-style failure report",
+    )
+    why_parser.add_argument("agent_id", help="Agent identifier to analyze")
+    why_parser.add_argument("--store-dir", help="Checkpoint store directory")
+    why_parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Show detailed diff entries for each transition",
+    )
+
     args = parser.parse_args()
 
     if args.command == "version":
@@ -442,6 +587,8 @@ def main():
         cmd_rollback(args)
     elif args.command == "doctor":
         cmd_doctor(args)
+    elif args.command == "why":
+        cmd_why(args)
     else:
         parser.print_help()
         sys.exit(1)

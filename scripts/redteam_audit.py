@@ -100,10 +100,12 @@ def fetch_text(url):
 
 def fetch_headers(url):
     try:
-        req = urllib.request.Request(url, method="HEAD", headers={"User-Agent": "redteam-audit/2.0"})
+        req = urllib.request.Request(
+            url, method="HEAD", headers={"User-Agent": "redteam-audit/2.0"}
+        )
         with urllib.request.urlopen(req, timeout=10) as resp:
             return dict(resp.headers), resp.status
-    except Exception as e:
+    except Exception:
         return {}, 0
 
 
@@ -126,7 +128,7 @@ def count_pattern_in_files(pattern, directory, extensions):
 
 def clean_for_matching(text):
     """Strip backticks and HTML code tags for tagline matching."""
-    return re.sub(r'`|</?code>', '', text).lower()
+    return re.sub(r"`|</?code>", "", text).lower()
 
 
 def extract_number(text, pattern):
@@ -143,9 +145,7 @@ def phase_stale_copy():
         for pub_dir in PUBLIC_DIRS:
             full_dir = REPO_ROOT / pub_dir
             if full_dir.exists():
-                hits = count_pattern_in_files(
-                    re.escape(phrase), str(full_dir), PUBLIC_EXTENSIONS
-                )
+                hits = count_pattern_in_files(re.escape(phrase), str(full_dir), PUBLIC_EXTENSIONS)
                 all_hits.extend([(phrase, h) for h in hits])
 
     for f in REPO_ROOT.glob("*"):
@@ -204,10 +204,12 @@ def phase_number_claims():
     for cf in cli_files:
         try:
             content = cf.read_text(errors="replace")
-            cli_count += len(re.findall(
-                r'@\w+\.command|@click\.command|add_command|add_parser|def (\w+)\(.*ctx',
-                content
-            ))
+            cli_count += len(
+                re.findall(
+                    r"@\w+\.command|@click\.command|add_command|add_parser|def (\w+)\(.*ctx",
+                    content,
+                )
+            )
         except Exception:
             pass
     extracted_data["cli_code"] = cli_count
@@ -234,7 +236,10 @@ def phase_pypi():
     check("PyPI version is set", bool(pypi_version), pypi_version)
     check("PyPI summary contains tagline", CANONICAL_TAGLINE in pypi_summary.lower(), pypi_summary)
     check("PyPI license is Apache-2.0", "apache" in (i.get("license") or "").lower())
-    check("PyPI has homepage URL", bool(i.get("home_page") or i.get("project_urls", {}).get("Homepage")))
+    check(
+        "PyPI has homepage URL",
+        bool(i.get("home_page") or i.get("project_urls", {}).get("Homepage")),
+    )
 
     pyproject = REPO_ROOT / "pyproject.toml"
     if pyproject.exists():
@@ -244,7 +249,10 @@ def phase_pypi():
             local_version = m.group(1)
             extracted_data["version_local"] = local_version
             if local_version != pypi_version:
-                warn(f"Local version ({local_version}) ≠ PyPI ({pypi_version})", "expected if unreleased")
+                warn(
+                    f"Local version ({local_version}) ≠ PyPI ({pypi_version})",
+                    "expected if unreleased",
+                )
             else:
                 check("Local version matches PyPI", True, local_version)
 
@@ -263,9 +271,19 @@ def phase_github():
 
     check("GitHub description contains tagline", CANONICAL_TAGLINE in desc.lower(), desc[:80])
     check("GitHub homepage URL set", bool(data.get("homepage")), data.get("homepage", "not set"))
-    check("GitHub topics set", len(data.get("topics", [])) >= 5, f"{len(data.get('topics', []))} topics")
-    check("GitHub license set", bool(data.get("license")), data.get("license", {}).get("spdx_id", "none"))
-    info(f"Stars: {data.get('stargazers_count', 0)}, Forks: {data.get('forks_count', 0)}, Open Issues: {data.get('open_issues_count', 0)}")
+    check(
+        "GitHub topics set",
+        len(data.get("topics", [])) >= 5,
+        f"{len(data.get('topics', []))} topics",
+    )
+    check(
+        "GitHub license set",
+        bool(data.get("license")),
+        data.get("license", {}).get("spdx_id", "none"),
+    )
+    info(
+        f"Stars: {data.get('stargazers_count', 0)}, Forks: {data.get('forks_count', 0)}, Open Issues: {data.get('open_issues_count', 0)}"
+    )
 
 
 # ─── Phase 5: Website ────────────────────────────────────
@@ -299,7 +317,9 @@ def phase_website():
     else:
         check("og:description meta tag exists", False)
 
-    check("Demo embedded on website", "demo.webp" in html or "demo.mp4" in html or "demo.gif" in html)
+    check(
+        "Demo embedded on website", "demo.webp" in html or "demo.mp4" in html or "demo.gif" in html
+    )
 
     # Extract framework count from website table (exclude 'Custom' — it's extensible, not a framework)
     fw_rows = re.findall(r"<td>([^<]+)</td>\s*<td[^>]*>✓", html)
@@ -327,7 +347,11 @@ def phase_gtm():
     for f in sorted(content_dir.glob("*.md")):
         content = f.read_text(errors="replace")
         stale_found = [p for p in STALE_PHRASES if p.lower() in content.lower()]
-        check(f"{f.name}: no stale phrases", not stale_found, "; ".join(stale_found) if stale_found else "")
+        check(
+            f"{f.name}: no stale phrases",
+            not stale_found,
+            "; ".join(stale_found) if stale_found else "",
+        )
 
         urls = re.findall(r"(?:https?://)?github\.com/GDWN-BLDR[^\s\)\"'>]*", content)
         check(f"{f.name}: has GitHub links", len(urls) > 0)
@@ -363,16 +387,22 @@ def phase_code_hygiene():
         (".py",),
     )
     real_danger = [h for h in danger_hits if "scanner" not in h and "compliance" not in h]
-    check("No pickle/eval/yaml.load in source", len(real_danger) == 0,
-          "; ".join(real_danger) if real_danger else "")
+    check(
+        "No pickle/eval/yaml.load in source",
+        len(real_danger) == 0,
+        "; ".join(real_danger) if real_danger else "",
+    )
 
     secret_hits = count_pattern_in_files(
         r"(sk-[a-zA-Z0-9]{20,}|AKIA[A-Z0-9]{16}|ghp_[a-zA-Z0-9]{36})",
         str(REPO_ROOT),
         PUBLIC_EXTENSIONS,
     )
-    check("No hardcoded API keys/secrets", len(secret_hits) == 0,
-          "; ".join(secret_hits) if secret_hits else "")
+    check(
+        "No hardcoded API keys/secrets",
+        len(secret_hits) == 0,
+        "; ".join(secret_hits) if secret_hits else "",
+    )
 
     init_file = REPO_ROOT / "stateweave" / "__init__.py"
     if init_file.exists():
@@ -380,11 +410,24 @@ def phase_code_hygiene():
         check("__init__.py has __version__", "__version__" in content)
 
     # Check for sensitive directories leaked into git despite .gitignore
-    sensitive_dirs = ["board/", "breakdown/", "research/", "content/", ".agent/", ".agents/", ".stateweave/", "website/", "blog/"]
+    sensitive_dirs = [
+        "board/",
+        "breakdown/",
+        "research/",
+        "content/",
+        ".agent/",
+        ".agents/",
+        ".stateweave/",
+        "website/",
+        "blog/",
+    ]
     try:
         tracked = subprocess.run(
             ["git", "ls-files", "--cached"],
-            capture_output=True, text=True, cwd=str(REPO_ROOT), timeout=10,
+            capture_output=True,
+            text=True,
+            cwd=str(REPO_ROOT),
+            timeout=10,
         )
         if tracked.returncode == 0:
             leaked = []
@@ -392,8 +435,11 @@ def phase_code_hygiene():
                 leaked_files = [f for f in tracked.stdout.splitlines() if f.startswith(sd)]
                 if leaked_files:
                     leaked.append(f"{sd} ({len(leaked_files)} files)")
-            check("No sensitive dirs tracked in git", len(leaked) == 0,
-                  "; ".join(leaked) if leaked else "board/, breakdown/, .agent/, website/ all clean")
+            check(
+                "No sensitive dirs tracked in git",
+                len(leaked) == 0,
+                "; ".join(leaked) if leaked else "board/, breakdown/, .agent/, website/ all clean",
+            )
     except Exception:
         warn("Could not check git tracked files")
 
@@ -404,14 +450,19 @@ def phase_assets():
     demo_gif = REPO_ROOT / "assets" / "demo.gif"
     demo_webp = REPO_ROOT / "assets" / "demo.webp"
     demo = demo_gif if demo_gif.exists() else demo_webp
-    check("Demo asset exists", demo.exists(),
-          f"{demo.name} — {demo.stat().st_size:,} bytes" if demo.exists() else "missing")
+    check(
+        "Demo asset exists",
+        demo.exists(),
+        f"{demo.name} — {demo.stat().st_size:,} bytes" if demo.exists() else "missing",
+    )
 
     og = REPO_ROOT / "examples" / "full_demo.py"
     check("Full demo script exists (examples/full_demo.py)", og.exists())
 
     readme = (REPO_ROOT / "README.md").read_text(errors="replace")
-    check("README references demo asset", "assets/demo.gif" in readme or "assets/demo.webp" in readme)
+    check(
+        "README references demo asset", "assets/demo.gif" in readme or "assets/demo.webp" in readme
+    )
     check("README references full_demo.py", "full_demo.py" in readme)
 
 
@@ -424,7 +475,7 @@ def phase_time_to_value():
     if py_version < (3, 10):
         warn(
             f"System Python is {py_version.major}.{py_version.minor} (need ≥3.10)",
-            "TTV test skipped — run on Python 3.10+ or in CI"
+            "TTV test skipped — run on Python 3.10+ or in CI",
         )
         extracted_data["ttv_seconds"] = None
         extracted_data["ttv_skipped"] = f"Python {py_version.major}.{py_version.minor}"
@@ -436,7 +487,9 @@ def phase_time_to_value():
         t0 = time.time()
         subprocess.run(
             [sys.executable, "-m", "venv", venv_dir],
-            check=True, capture_output=True, timeout=30,
+            check=True,
+            capture_output=True,
+            timeout=30,
         )
         venv_python = os.path.join(venv_dir, "bin", "python")
         t_venv = time.time() - t0
@@ -445,16 +498,23 @@ def phase_time_to_value():
         t0 = time.time()
         subprocess.run(
             [venv_python, "-m", "pip", "install", "--quiet", "--upgrade", "pip"],
-            capture_output=True, text=True, timeout=60,
+            capture_output=True,
+            text=True,
+            timeout=60,
         )
         result = subprocess.run(
             [venv_python, "-m", "pip", "install", "--quiet", PYPI_PACKAGE],
-            capture_output=True, text=True, timeout=120,
+            capture_output=True,
+            text=True,
+            timeout=120,
         )
         t_install = time.time() - t0
         install_ok = result.returncode == 0
-        check(f"pip install {PYPI_PACKAGE} succeeds", install_ok,
-              result.stderr.strip()[-100:] if not install_ok else f"{t_install:.1f}s")
+        check(
+            f"pip install {PYPI_PACKAGE} succeeds",
+            install_ok,
+            result.stderr.strip()[-100:] if not install_ok else f"{t_install:.1f}s",
+        )
 
         if install_ok:
             # Run demo
@@ -463,13 +523,18 @@ def phase_time_to_value():
                 t0 = time.time()
                 result = subprocess.run(
                     [venv_python, str(demo_script)],
-                    capture_output=True, text=True, timeout=60,
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
                     cwd=str(REPO_ROOT),
                 )
                 t_demo = time.time() - t0
                 demo_ok = result.returncode == 0
-                check(f"full_demo.py runs successfully", demo_ok,
-                      f"{t_demo:.1f}s" if demo_ok else result.stderr.strip()[-200:])
+                check(
+                    "full_demo.py runs successfully",
+                    demo_ok,
+                    f"{t_demo:.1f}s" if demo_ok else result.stderr.strip()[-200:],
+                )
 
                 if demo_ok:
                     # Verify output contains expected markers
@@ -480,8 +545,11 @@ def phase_time_to_value():
 
                 total_time = t_venv + t_install + t_demo
                 extracted_data["ttv_seconds"] = round(total_time, 1)
-                check(f"Total time-to-value: {total_time:.1f}s", total_time < 90,
-                      "Target: < 90 seconds from zero to working demo")
+                check(
+                    f"Total time-to-value: {total_time:.1f}s",
+                    total_time < 90,
+                    "Target: < 90 seconds from zero to working demo",
+                )
             else:
                 check("Demo script exists for TTV test", False)
     except subprocess.TimeoutExpired:
@@ -519,8 +587,12 @@ def phase_consistency_matrix():
     matrix["tagline"]["README"] = CANONICAL_TAGLINE in readme_clean
     matrix["tagline"]["llms.txt"] = CANONICAL_TAGLINE in clean_for_matching(llms)
     matrix["tagline"]["PyPI"] = CANONICAL_TAGLINE in extracted_data.get("tagline_pypi", "").lower()
-    matrix["tagline"]["GitHub"] = CANONICAL_TAGLINE in extracted_data.get("tagline_github", "").lower()
-    matrix["tagline"]["Website"] = CANONICAL_TAGLINE in extracted_data.get("tagline_website", "").lower()
+    matrix["tagline"]["GitHub"] = (
+        CANONICAL_TAGLINE in extracted_data.get("tagline_github", "").lower()
+    )
+    matrix["tagline"]["Website"] = (
+        CANONICAL_TAGLINE in extracted_data.get("tagline_website", "").lower()
+    )
 
     # Framework count
     matrix["framework_count"]["Code"] = extracted_data.get("adapters_code")
@@ -586,8 +658,11 @@ def phase_consistency_matrix():
     print("  └─────────────────┴─────────────────────────────────────────────────┘")
     print()
 
-    check("All consistency matrix claims match", mismatches == 0,
-          f"{mismatches} mismatch(es)" if mismatches else "all surfaces consistent")
+    check(
+        "All consistency matrix claims match",
+        mismatches == 0,
+        f"{mismatches} mismatch(es)" if mismatches else "all surfaces consistent",
+    )
 
 
 # ─── Phase 11: Persona Scorecards ────────────────────────
@@ -600,56 +675,74 @@ def phase_persona_scorecards():
 
     # Persona 1: Skeptical HN Commenter
     p1_scores = {}
-    p1_scores["demo_proof"] = 5 if (REPO_ROOT / "assets" / "demo.gif").exists() or (REPO_ROOT / "assets" / "demo.webp").exists() else 1
+    p1_scores["demo_proof"] = (
+        5
+        if (REPO_ROOT / "assets" / "demo.gif").exists()
+        or (REPO_ROOT / "assets" / "demo.webp").exists()
+        else 1
+    )
     p1_scores["test_badge"] = 5 if extracted_data.get("tests_code", 0) >= 400 else 2
     p1_scores["honest_framing"] = 5  # Earned if no stale copy and tagline is canonical
     if any(r["status"] == "fail" and "Stale" in r["name"] for r in results):
         p1_scores["honest_framing"] = 2
-    elif not any(r["status"] == "pass" and "canonical tagline" in r["name"].lower() for r in results):
+    elif not any(
+        r["status"] == "pass" and "canonical tagline" in r["name"].lower() for r in results
+    ):
         p1_scores["honest_framing"] = 3
     p1_avg = sum(p1_scores.values()) / len(p1_scores)
-    scorecards.append({
-        "persona": "Skeptical HN Commenter",
-        "scores": p1_scores,
-        "average": round(p1_avg, 1),
-    })
+    scorecards.append(
+        {
+            "persona": "Skeptical HN Commenter",
+            "scores": p1_scores,
+            "average": round(p1_avg, 1),
+        }
+    )
     print(f"  1. Skeptical HN Commenter      {p1_avg:.1f}/5  {p1_scores}")
 
     # Persona 3: Security Auditor
     p3_scores = {}
-    p3_scores["no_dangerous_calls"] = 5 if not any(
-        r["status"] == "fail" and "pickle" in r["name"] for r in results
-    ) else 1
-    p3_scores["no_secrets"] = 5 if not any(
-        r["status"] == "fail" and "secret" in r["name"].lower() for r in results
-    ) else 1
+    p3_scores["no_dangerous_calls"] = (
+        5 if not any(r["status"] == "fail" and "pickle" in r["name"] for r in results) else 1
+    )
+    p3_scores["no_secrets"] = (
+        5
+        if not any(r["status"] == "fail" and "secret" in r["name"].lower() for r in results)
+        else 1
+    )
     enc_file = REPO_ROOT / "stateweave" / "encryption.py"
     if enc_file.exists():
         enc = enc_file.read_text()
         p3_scores["real_aes256"] = 5 if "AES" in enc and "GCM" in enc else 2
         p3_scores["pbkdf2_iterations"] = 5 if re.search(r"iterations\s*=\s*[6-9]\d{5}", enc) else 3
     p3_avg = sum(p3_scores.values()) / len(p3_scores)
-    scorecards.append({
-        "persona": "Security Auditor",
-        "scores": p3_scores,
-        "average": round(p3_avg, 1),
-    })
+    scorecards.append(
+        {
+            "persona": "Security Auditor",
+            "scores": p3_scores,
+            "average": round(p3_avg, 1),
+        }
+    )
     print(f"  3. Security Auditor             {p3_avg:.1f}/5  {p3_scores}")
 
     # Persona 4: Competitor
     p4_scores = {}
-    # Check if website has tier labels (badge-stable, badge-beta, etc.)
-    tier_legend_on_website = "tier-legend" in extracted_data.get("tagline_website", "").lower() or \
-        any("tier" in r.get("detail", "").lower() for r in results if r.get("detail"))
-    # Website has a tier legend — verified in Phase 5
-    p4_scores["tier_transparency"] = 5 if (REPO_ROOT / "stateweave" / "adapters" / "base.py").read_text().count("AdapterTier") >= 2 else 4
-    p4_scores["claim_accuracy"] = 5 if extracted_data.get("adapters_code") == EXPECTED_FRAMEWORK_COUNT else 2
+    # Tier transparency — check that AdapterTier is defined and used in base.py
+    p4_scores["tier_transparency"] = (
+        5
+        if (REPO_ROOT / "stateweave" / "adapters" / "base.py").read_text().count("AdapterTier") >= 2
+        else 4
+    )
+    p4_scores["claim_accuracy"] = (
+        5 if extracted_data.get("adapters_code") == EXPECTED_FRAMEWORK_COUNT else 2
+    )
     p4_avg = sum(p4_scores.values()) / len(p4_scores)
-    scorecards.append({
-        "persona": "Competitor",
-        "scores": p4_scores,
-        "average": round(p4_avg, 1),
-    })
+    scorecards.append(
+        {
+            "persona": "Competitor",
+            "scores": p4_scores,
+            "average": round(p4_avg, 1),
+        }
+    )
     print(f"  4. Competitor                   {p4_avg:.1f}/5  {p4_scores}")
 
     # Persona 7: First-Time User
@@ -658,27 +751,33 @@ def phase_persona_scorecards():
     ttv_skipped = extracted_data.get("ttv_skipped")
     if ttv is not None:
         p7_scores["install_works"] = 5
-        p7_scores["demo_runs"] = 5 if not any(
-            r["status"] == "fail" and "full_demo.py runs" in r["name"] for r in results
-        ) else 1
+        p7_scores["demo_runs"] = (
+            5
+            if not any(r["status"] == "fail" and "full_demo.py runs" in r["name"] for r in results)
+            else 1
+        )
         p7_scores["time_under_90s"] = 5 if ttv < 90 else (3 if ttv < 120 else 1)
         p7_avg = sum(p7_scores.values()) / len(p7_scores)
-        scorecards.append({
-            "persona": "First-Time User",
-            "scores": p7_scores,
-            "average": round(p7_avg, 1),
-        })
+        scorecards.append(
+            {
+                "persona": "First-Time User",
+                "scores": p7_scores,
+                "average": round(p7_avg, 1),
+            }
+        )
         print(f"  7. First-Time User              {p7_avg:.1f}/5  {p7_scores}")
     elif ttv_skipped:
         print(f"  7. First-Time User              N/A   (skipped: {ttv_skipped})")
     else:
         p7_scores = {"install_works": 0, "demo_runs": 0, "time_under_90s": 0}
         p7_avg = 0.0
-        scorecards.append({
-            "persona": "First-Time User",
-            "scores": p7_scores,
-            "average": 0.0,
-        })
+        scorecards.append(
+            {
+                "persona": "First-Time User",
+                "scores": p7_scores,
+                "average": 0.0,
+            }
+        )
         print(f"  7. First-Time User              {p7_avg:.1f}/5  {p7_scores}")
 
     # Persona 8: Journalist
@@ -689,11 +788,13 @@ def phase_persona_scorecards():
     )
     p8_scores["numbers_consistent"] = 5 if matrix_passed else 3
     p8_avg = sum(p8_scores.values()) / len(p8_scores)
-    scorecards.append({
-        "persona": "Journalist / Analyst",
-        "scores": p8_scores,
-        "average": round(p8_avg, 1),
-    })
+    scorecards.append(
+        {
+            "persona": "Journalist / Analyst",
+            "scores": p8_scores,
+            "average": round(p8_avg, 1),
+        }
+    )
     print(f"  8. Journalist / Analyst         {p8_avg:.1f}/5  {p8_scores}")
 
     # Persona 9: SMB Customer
@@ -704,30 +805,36 @@ def phase_persona_scorecards():
         p9_scores["time_to_value"] = None
     else:
         p9_scores["time_to_value"] = 5 if (ttv and ttv < 60) else (3 if (ttv and ttv < 120) else 1)
-    p9_scores["open_source_clear"] = 5 if any(
-        r["status"] == "pass" and "license" in r["name"].lower() for r in results
-    ) else 2
+    p9_scores["open_source_clear"] = (
+        5 if any(r["status"] == "pass" and "license" in r["name"].lower() for r in results) else 2
+    )
     scored_vals = [v for v in p9_scores.values() if v is not None]
     p9_avg = sum(scored_vals) / max(len(scored_vals), 1)
-    scorecards.append({
-        "persona": "SMB Customer",
-        "scores": {k: v for k, v in p9_scores.items() if v is not None},
-        "average": round(p9_avg, 1),
-    })
+    scorecards.append(
+        {
+            "persona": "SMB Customer",
+            "scores": {k: v for k, v in p9_scores.items() if v is not None},
+            "average": round(p9_avg, 1),
+        }
+    )
     print(f"  9. SMB Customer                 {p9_avg:.1f}/5  {p9_scores}")
 
     # Persona 10: Mid-Market
     p10_scores = {}
     p10_scores["test_credibility"] = 5 if extracted_data.get("tests_code", 0) >= 400 else 2
     docs_dir = REPO_ROOT / "docs"
-    p10_scores["docs_exist"] = 5 if docs_dir.exists() and len(list(docs_dir.rglob("*.md"))) > 3 else 2
+    p10_scores["docs_exist"] = (
+        5 if docs_dir.exists() and len(list(docs_dir.rglob("*.md"))) > 3 else 2
+    )
     p10_scores["contributing_exists"] = 5 if (REPO_ROOT / "CONTRIBUTING.md").exists() else 1
     p10_avg = sum(p10_scores.values()) / len(p10_scores)
-    scorecards.append({
-        "persona": "Mid-Market Customer",
-        "scores": p10_scores,
-        "average": round(p10_avg, 1),
-    })
+    scorecards.append(
+        {
+            "persona": "Mid-Market Customer",
+            "scores": p10_scores,
+            "average": round(p10_avg, 1),
+        }
+    )
     print(f"  10. Mid-Market Customer         {p10_avg:.1f}/5  {p10_scores}")
 
     # Persona 11: Enterprise
@@ -735,7 +842,9 @@ def phase_persona_scorecards():
     p11_scores["license_clear"] = 5 if (REPO_ROOT / "LICENSE").exists() else 1
     p11_scores["security_policy"] = 5 if (REPO_ROOT / "SECURITY.md").exists() else 1
     p11_scores["changelog"] = 5 if (REPO_ROOT / "CHANGELOG.md").exists() else 1
-    p11_scores["semver"] = 5 if re.match(r"\d+\.\d+\.\d+", extracted_data.get("version_local", "")) else 2
+    p11_scores["semver"] = (
+        5 if re.match(r"\d+\.\d+\.\d+", extracted_data.get("version_local", "")) else 2
+    )
     # Check if real encryption exists (AES-256-GCM in core/encryption.py)
     enc_file = REPO_ROOT / "stateweave" / "core" / "encryption.py"
     if enc_file.exists():
@@ -743,15 +852,19 @@ def phase_persona_scorecards():
         has_aes = "AESGCM" in enc_src
         has_pbkdf2 = "PBKDF2" in enc_src
         has_proper_iterations = "600_000" in enc_src or "600000" in enc_src
-        p11_scores["encryption_real"] = 5 if (has_aes and has_pbkdf2 and has_proper_iterations) else 3
+        p11_scores["encryption_real"] = (
+            5 if (has_aes and has_pbkdf2 and has_proper_iterations) else 3
+        )
     else:
         p11_scores["encryption_real"] = 1
     p11_avg = sum(p11_scores.values()) / len(p11_scores)
-    scorecards.append({
-        "persona": "Enterprise Customer",
-        "scores": p11_scores,
-        "average": round(p11_avg, 1),
-    })
+    scorecards.append(
+        {
+            "persona": "Enterprise Customer",
+            "scores": p11_scores,
+            "average": round(p11_avg, 1),
+        }
+    )
     print(f"  11. Enterprise Customer         {p11_avg:.1f}/5  {p11_scores}")
 
     extracted_data["persona_scorecards"] = scorecards
@@ -811,8 +924,7 @@ def save_history():
         "cli_commands": extracted_data.get("cli_code"),
         "version": extracted_data.get("version_local"),
         "persona_scores": {
-            s["persona"]: s["average"]
-            for s in extracted_data.get("persona_scorecards", [])
+            s["persona"]: s["average"] for s in extracted_data.get("persona_scorecards", [])
         },
         "failures": [r["name"] for r in results if r["status"] == "fail"],
     }
@@ -846,8 +958,7 @@ def print_json():
     output = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "results": results,
-        "extracted_data": {k: v for k, v in extracted_data.items()
-                          if k != "consistency_matrix"},
+        "extracted_data": {k: v for k, v in extracted_data.items() if k != "consistency_matrix"},
         "consistency_matrix": extracted_data.get("consistency_matrix", {}),
         "scorecard": {
             "passed": sum(1 for r in results if r["status"] == "pass"),

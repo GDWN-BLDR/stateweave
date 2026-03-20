@@ -185,3 +185,81 @@ class StateWeaveAdapter(ABC):
                 f"Or install {framework_name} directly:\n\n"
                 f"    pip install {framework_name}"
             )
+
+    def create_sample_payload(
+        self,
+        agent_id: str = "sample-agent",
+        num_messages: int = 3,
+    ) -> StateWeavePayload:
+        """Create a realistic sample payload for this framework.
+
+        Works without the actual framework installed. Useful for demos,
+        testing, and the quickstart experience.
+
+        Args:
+            agent_id: Identifier for the sample agent.
+            num_messages: Number of sample conversation messages to include.
+
+        Returns:
+            A populated StateWeavePayload that can be checkpointed,
+            diffed, and rolled back without any framework dependency.
+        """
+        from datetime import datetime
+
+        from stateweave.schema.v1 import (
+            AgentMetadata,
+            CognitiveState,
+            GoalNode,
+            Message,
+            StateWeavePayload,
+            ToolResult,
+        )
+
+        sample_messages = [
+            Message(role="system", content="You are a helpful AI assistant."),
+            Message(role="human", content="Analyze the Q4 sales data and find trends."),
+            Message(
+                role="assistant",
+                content="I'll analyze the Q4 sales data. Let me start by looking at the monthly breakdown...",
+            ),
+            Message(role="human", content="Focus on the top 3 product categories."),
+            Message(
+                role="assistant",
+                content="Here are the top 3 categories: Electronics (+15%), Home & Garden (+8%), Sports (-3%).",
+            ),
+        ][:num_messages]
+
+        return StateWeavePayload(
+            schema_version="1.0.0",
+            stateweave_version="0.3.0",
+            source_framework=self.framework_name,
+            metadata=AgentMetadata(
+                agent_id=agent_id,
+                agent_name=f"Sample {self.framework_name.title()} Agent",
+                created_at=datetime.utcnow().isoformat(),
+                description=f"Sample agent created for {self.framework_name} demonstration",
+            ),
+            cognitive_state=CognitiveState(
+                conversation_history=sample_messages,
+                working_memory={
+                    "current_task": "Analyze Q4 sales data",
+                    "confidence": 0.85,
+                    "tools_used": ["data_query", "chart_generator"],
+                },
+                goal_tree={
+                    "primary": GoalNode(
+                        goal_id="primary",
+                        description="Provide actionable sales insights",
+                        status="active",
+                    ),
+                },
+                tool_results_cache={
+                    "data_query": ToolResult(
+                        tool_name="data_query",
+                        arguments={"query": "SELECT * FROM sales WHERE quarter='Q4'"},
+                        result={"rows": 1247, "categories": 12},
+                        success=True,
+                    ),
+                },
+            ),
+        )
