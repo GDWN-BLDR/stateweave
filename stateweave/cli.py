@@ -626,6 +626,397 @@ include_audit_trail = true
     print("    stateweave export -f langgraph -a my-agent  — export state")
 
 
+def cmd_replay(args):
+    """Step-by-step replay of an agent's checkpoint history.
+
+    Like a debugger for agent cognition — shows what changed at each step,
+    tracks confidence drift, and alerts on anomalies.
+    """
+    from stateweave.core.replay import ReplayEngine
+    from stateweave.core.timetravel import CheckpointStore
+
+    store_dir = args.store_dir if hasattr(args, "store_dir") and args.store_dir else None
+    store = CheckpointStore(store_dir=store_dir)
+    engine = ReplayEngine(store)
+
+    from_v = getattr(args, "from_version", None)
+    to_v = getattr(args, "to_version", None)
+
+    result = engine.replay(args.agent_id, from_version=from_v, to_version=to_v)
+
+    if not result.steps:
+        print(f"⚠ No checkpoints found for '{args.agent_id}'")
+        return
+
+    print()
+    print(f"⏪ Replaying: {result.agent_id} ({result.total_versions} checkpoints)")
+    print("═" * 60)
+
+    for i, step in enumerate(result.steps):
+        conf_str = ""
+        if step.confidence is not None:
+            if i > 0 and result.steps[i - 1].confidence is not None:
+                prev_conf = result.steps[i - 1].confidence
+                if step.confidence < prev_conf:
+                    conf_str = f" │ 🎯 {step.confidence:.2f} ↓"
+                elif step.confidence > prev_conf:
+                    conf_str = f" │ 🎯 {step.confidence:.2f} ↑"
+                else:
+                    conf_str = f" │ 🎯 {step.confidence:.2f}"
+            else:
+                conf_str = f" │ 🎯 {step.confidence:.2f}"
+
+        print()
+        print(
+            f"  [v{step.version}] {step.label or 'unnamed'}"
+            f"    📝 {step.message_count} msgs"
+            f" │ 🧠 {step.working_memory_keys} keys"
+            f"{conf_str}"
+        )
+        print("  " + "─" * 56)
+
+        # Changes (skip for first step unless verbose)
+        if i == 0:
+            if step.message_count > 0:
+                print(
+                    f"    Initial state: {step.message_count} messages, {step.working_memory_keys} memory keys"
+                )
+        else:
+            if step.messages_added:
+                print(f"    + {step.messages_added} message(s) added")
+            if step.messages_removed:
+                print(f"    - {step.messages_removed} message(s) removed")
+            for key in step.memory_added[:5]:
+                print(f"    + mem: {key}")
+            if len(step.memory_added) > 5:
+                print(f"    + ... and {len(step.memory_added) - 5} more keys")
+            for key in step.memory_removed[:5]:
+                print(f"    - mem: {key}")
+            for key, (old, new) in list(step.memory_changed.items())[:5]:
+                old_s = str(old)[:30]
+                new_s = str(new)[:30]
+                print(f"    ~ mem: {key} {old_s} → {new_s}")
+            if len(step.memory_changed) > 5:
+                print(f"    ~ ... and {len(step.memory_changed) - 5} more changes")
+
+        # Alerts
+        for alert in step.alerts:
+            print(f"    🔴 ALERT: {alert}")
+
+    # Summary
+    print()
+    print("─" * 60)
+    biggest = result.biggest_change_step
+    if biggest and biggest.total_changes > 0:
+        print(
+            f"  Biggest change: v{biggest.version}"
+            f" ({biggest.total_changes} changes)"
+            f" {biggest.label or ''}"
+        )
+
+    # Confidence trend
+    confs = [c for c in result.confidence_trend if c is not None]
+    if len(confs) >= 2:
+        trend = "📈" if confs[-1] > confs[0] else "📉" if confs[-1] < confs[0] else "➡️"
+        print(f"  Confidence trend: {confs[0]:.2f} → {confs[-1]:.2f} {trend}")
+
+    print("═" * 60)
+
+
+def cmd_status(args):
+    """Show health dashboard for all agents in the project.
+
+    Like `git status` but for agent state — shows all tracked agents,
+    their checkpoint count, message count, and health status.
+    """
+    from datetime import datetime
+
+    from stateweave.core.timetravel import CheckpointStore
+
+    store_dir = args.store_dir if hasattr(args, "store_dir") and args.store_dir else None
+    store = CheckpointStore(store_dir=store_dir)
+
+    # Find all agents
+    root = store._root
+    if not root.exists():
+        print("⚠ No .stateweave/checkpoints/ directory found.")
+        print("  Run: stateweave init")
+        return
+
+    agent_dirs = [d for d in root.iterdir() if d.is_dir() and (d / "manifest.json").exists()]
+
+    if not agent_dirs:
+        print("⚠ No agents tracked yet.")
+        print("  Run: stateweave quickstart")
+        return
+
+    print()
+    print("🧶 StateWeave Status")
+    print("═" * 70)
+    print(f"  Project: {root.resolve()}")
+    print(f"  Agents:  {len(agent_dirs)} tracked")
+    print()
+
+    # Header
+    print(
+        f"  {'Agent':<22}│ {'v':>3} │ {'Msgs':>4} │ {'Memory':>7} │ {'Health':>8} │ Last Checkpoint"
+    )
+    print(
+        "  "
+        + "─" * 22
+        + "┼"
+        + "─" * 5
+        + "┼"
+        + "─" * 6
+        + "┼"
+        + "─" * 9
+        + "┼"
+        + "─" * 10
+        + "┼"
+        + "─" * 17
+    )
+
+    alerts = []
+    now = datetime.utcnow()
+
+    for agent_dir in sorted(agent_dirs):
+        agent_id = agent_dir.name
+        try:
+            history = store.history(agent_id)
+        except Exception:
+            continue
+
+        if not history.checkpoints:
+            continue
+
+        latest = history.latest
+        if latest is None:
+            continue
+
+        # Calculate time ago
+        try:
+            cp_time = datetime.fromisoformat(latest.created_at)
+            delta = now - cp_time
+            if delta.total_seconds() < 60:
+                time_ago = f"{int(delta.total_seconds())}s ago"
+            elif delta.total_seconds() < 3600:
+                time_ago = f"{int(delta.total_seconds() / 60)}m ago"
+            elif delta.total_seconds() < 86400:
+                time_ago = f"{int(delta.total_seconds() / 3600)}h ago"
+            else:
+                time_ago = f"{int(delta.total_seconds() / 86400)}d ago"
+        except Exception:
+            time_ago = latest.created_at[:16]
+            delta = None
+
+        # Health assessment
+        health = "✅ OK"
+        health_issues = []
+
+        # Check for confidence drift
+        if len(history.checkpoints) >= 2:
+            try:
+                latest_payload = store._load_payload(agent_id, latest.version)
+                if latest_payload:
+                    wm = latest_payload.cognitive_state.working_memory
+                    conf = None
+                    for key in ("confidence", "confidence_score", "agent_confidence"):
+                        if key in wm:
+                            try:
+                                conf = float(wm[key])
+                            except (ValueError, TypeError):
+                                pass
+                            break
+                    if conf is not None and conf < 0.5:
+                        health = "⚠ DRIFT"
+                        health_issues.append(f"{agent_id}: confidence at {conf:.2f}")
+                    if "hallucination_risk" in wm:
+                        health = "🔴 RISK"
+                        health_issues.append(f"{agent_id}: hallucination risk detected")
+            except Exception:
+                pass
+
+        # Check for staleness
+        if delta and delta.total_seconds() > 7200:  # 2 hours
+            if health == "✅ OK":
+                health = "⚠ STALE"
+            health_issues.append(f"{agent_id}: no checkpoint in {time_ago}")
+
+        name_display = agent_id[:22]
+        print(
+            f"  {name_display:<22}│ {latest.version:>3} "
+            f"│ {latest.message_count:>4} "
+            f"│ {latest.working_memory_keys:>4} keys"
+            f" │ {health:<8}"
+            f" │ {time_ago}"
+        )
+
+        alerts.extend(health_issues)
+
+    if alerts:
+        print()
+        for alert in alerts:
+            print(f"  ⚠ {alert}")
+
+    print("═" * 70)
+
+
+def cmd_compare(args):
+    """Compare two checkpoints side-by-side.
+
+    Supports comparing different versions of the same agent or
+    checkpoints of different agents. Like git diff but for agent brains.
+
+    Usage:
+        stateweave compare agent:v3 agent:v5
+        stateweave compare agent-a:latest agent-b:latest
+    """
+    from stateweave.core.diff import diff_payloads
+    from stateweave.core.timetravel import CheckpointStore
+
+    store_dir = args.store_dir if hasattr(args, "store_dir") and args.store_dir else None
+    store = CheckpointStore(store_dir=store_dir)
+
+    def parse_ref(ref):
+        """Parse 'agent:version' format."""
+        if ":" in ref:
+            parts = ref.split(":", 1)
+            agent_id = parts[0]
+            version_str = parts[1]
+            if version_str == "latest":
+                history = store.history(agent_id)
+                if history.latest:
+                    return agent_id, history.latest.version
+                raise ValueError(f"No checkpoints for '{agent_id}'")
+            return agent_id, int(version_str.lstrip("v"))
+        raise ValueError(f"Invalid ref '{ref}'. Use format: agent-id:v1 or agent-id:latest")
+
+    try:
+        left_agent, left_v = parse_ref(args.left)
+        right_agent, right_v = parse_ref(args.right)
+    except ValueError as e:
+        print(f"⚠ {e}")
+        return
+
+    # Load payloads
+    try:
+        left_payload = store._load_payload(left_agent, left_v)
+        right_payload = store._load_payload(right_agent, right_v)
+    except Exception as e:
+        print(f"⚠ Could not load checkpoints: {e}")
+        return
+
+    if left_payload is None or right_payload is None:
+        print("⚠ One or both checkpoints not found.")
+        return
+
+    # Get metadata
+    left_history = store.history(left_agent)
+    right_history = store.history(right_agent)
+    left_meta = left_history.get_version(left_v)
+    right_meta = right_history.get_version(right_v)
+
+    left_label = f"v{left_v}" + (f" ({left_meta.label})" if left_meta and left_meta.label else "")
+    right_label = f"v{right_v}" + (
+        f" ({right_meta.label})" if right_meta and right_meta.label else ""
+    )
+
+    print()
+    print("📊 Side-by-Side Comparison")
+    print("═" * 60)
+    print()
+
+    # Header
+    col_w = 20
+    print(f"  {'':20}│ {left_label:<{col_w}} │ {right_label:<{col_w}}")
+    print("  " + "─" * 20 + "┼" + "─" * (col_w + 2) + "┼" + "─" * (col_w + 2))
+
+    # Basic stats
+    left_msgs = len(left_payload.cognitive_state.conversation_history)
+    right_msgs = len(right_payload.cognitive_state.conversation_history)
+    left_wm = len(left_payload.cognitive_state.working_memory)
+    right_wm = len(right_payload.cognitive_state.working_memory)
+
+    rows = [
+        ("Messages", str(left_msgs), str(right_msgs)),
+        ("Working Memory", f"{left_wm} keys", f"{right_wm} keys"),
+        ("Framework", left_payload.source_framework, right_payload.source_framework),
+    ]
+
+    # Confidence
+    left_conf = None
+    right_conf = None
+    for key in ("confidence", "confidence_score", "agent_confidence"):
+        if key in left_payload.cognitive_state.working_memory:
+            try:
+                left_conf = float(left_payload.cognitive_state.working_memory[key])
+            except (ValueError, TypeError):
+                pass
+        if key in right_payload.cognitive_state.working_memory:
+            try:
+                right_conf = float(right_payload.cognitive_state.working_memory[key])
+            except (ValueError, TypeError):
+                pass
+
+    if left_conf is not None or right_conf is not None:
+        left_c = f"{left_conf:.2f}" if left_conf is not None else "n/a"
+        right_c = f"{right_conf:.2f}" if right_conf is not None else "n/a"
+        if left_conf is not None and left_conf < 0.5:
+            left_c += " 🔴"
+        elif left_conf is not None:
+            left_c += " ✅"
+        if right_conf is not None and right_conf < 0.5:
+            right_c += " 🔴"
+        elif right_conf is not None:
+            right_c += " ✅"
+        rows.append(("Confidence", left_c, right_c))
+
+    for label, left_val, right_val in rows:
+        print(f"  {label:<20}│ {left_val:<{col_w}} │ {right_val:<{col_w}}")
+
+    # Diff
+    diff = diff_payloads(left_payload, right_payload)
+    print()
+    print("  Key Differences:")
+
+    if not diff.has_changes:
+        print("    ✅ States are identical")
+    else:
+        if diff.added_count:
+            print(f"    + {diff.added_count} added")
+        if diff.removed_count:
+            print(f"    - {diff.removed_count} removed")
+        if diff.modified_count:
+            print(f"    ~ {diff.modified_count} modified")
+
+        # Show key working memory diffs
+        left_wm_dict = left_payload.cognitive_state.working_memory
+        right_wm_dict = right_payload.cognitive_state.working_memory
+
+        added_keys = set(right_wm_dict.keys()) - set(left_wm_dict.keys())
+        removed_keys = set(left_wm_dict.keys()) - set(right_wm_dict.keys())
+        changed_keys = {
+            k
+            for k in set(left_wm_dict.keys()) & set(right_wm_dict.keys())
+            if left_wm_dict[k] != right_wm_dict[k]
+        }
+
+        print()
+        for key in sorted(added_keys)[:5]:
+            val = str(right_wm_dict[key])[:40]
+            print(f"    + {right_label} has: {key}={val}")
+        for key in sorted(removed_keys)[:5]:
+            val = str(left_wm_dict[key])[:40]
+            print(f"    - {left_label} has: {key}={val}")
+        for key in sorted(changed_keys)[:5]:
+            old_v = str(left_wm_dict[key])[:20]
+            new_v = str(right_wm_dict[key])[:20]
+            print(f"    ~ {key}: {old_v} → {new_v}")
+
+    print()
+    print("═" * 60)
+
+
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
@@ -776,6 +1167,56 @@ def main():
         help="Project directory (default: current)",
     )
 
+    # replay
+    replay_parser = subparsers.add_parser(
+        "replay",
+        help="Step-by-step replay of agent checkpoint history",
+    )
+    replay_parser.add_argument("agent_id", help="Agent to replay")
+    replay_parser.add_argument(
+        "--from",
+        dest="from_version",
+        type=int,
+        default=None,
+        help="Start from this version",
+    )
+    replay_parser.add_argument(
+        "--to",
+        dest="to_version",
+        type=int,
+        default=None,
+        help="End at this version",
+    )
+    replay_parser.add_argument(
+        "--store-dir",
+        default=None,
+        help="Checkpoint store directory",
+    )
+
+    # status
+    status_parser = subparsers.add_parser(
+        "status",
+        help="Show health dashboard for all tracked agents",
+    )
+    status_parser.add_argument(
+        "--store-dir",
+        default=None,
+        help="Checkpoint store directory",
+    )
+
+    # compare
+    compare_parser = subparsers.add_parser(
+        "compare",
+        help="Compare two checkpoints side-by-side (e.g. agent:v3 agent:v5)",
+    )
+    compare_parser.add_argument("left", help="Left ref (agent-id:v1 or agent-id:latest)")
+    compare_parser.add_argument("right", help="Right ref (agent-id:v5 or agent-id:latest)")
+    compare_parser.add_argument(
+        "--store-dir",
+        default=None,
+        help="Checkpoint store directory",
+    )
+
     args = parser.parse_args()
 
     if args.command == "version":
@@ -812,6 +1253,12 @@ def main():
         cmd_quickstart(args)
     elif args.command == "init":
         cmd_init(args)
+    elif args.command == "replay":
+        cmd_replay(args)
+    elif args.command == "status":
+        cmd_status(args)
+    elif args.command == "compare":
+        cmd_compare(args)
     else:
         parser.print_help()
         sys.exit(1)
