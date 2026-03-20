@@ -86,7 +86,9 @@ $ python examples/full_demo.py
 7/7 steps passed. Everything runs from PyPI.
 ```
 
-> Try it yourself: `pip install stateweave && python examples/quickstart.py` (quickstart) or `python examples/full_demo.py` (all 7 steps)
+> **Try it now:** `pip install stateweave && stateweave quickstart` — zero-code demo in 10 seconds.
+>
+> Or run the full 7-step demo: `python examples/full_demo.py`
 
 ## Quick Start
 
@@ -225,6 +227,43 @@ print(diff.to_report())
 | Custom | Extend `StateWeaveAdapter` | ✅ | ✅ | DIY |
 
 > **Tier definitions:** 🟢 **Tier 1** = Core team maintained, guaranteed stability. 🟡 **Tier 2** = Actively maintained, patches may lag. 🔵 **Community** = Best-effort, contributed by community.
+
+## Debug Agent Failures
+
+When your agent hallucinates, crashes, or drifts — `stateweave why` shows you exactly what happened:
+
+```bash
+$ stateweave why my-agent
+
+🔍 StateWeave Autopsy: my-agent
+══════════════════════════════════════════
+  Checkpoints: 5 versions
+  Latest: v5 (2026-03-20 14:23:01)
+
+📊 State Evolution
+──────────────────────────────────────────
+  v1 → v2: 3 changes (+2 added, ~1 modified)
+  v2 → v3: 7 changes (+4 added, ~2 modified, -1 removed)  ← BIGGEST
+  v3 → v4: 1 change (~1 modified)
+  v4 → v5: 2 changes (+1 added, ~1 modified)
+
+🩺 Diagnosis
+  Biggest change: v2 → v3 (7 changes)
+  Label: after-tool-failure
+  💡 Recommendation: stateweave rollback my-agent 2
+```
+
+Then rollback and continue:
+
+```python
+from stateweave.core.timetravel import CheckpointStore
+
+store = CheckpointStore()
+restored = store.rollback("my-agent", version=2)
+# Agent brain restored to pre-failure state
+```
+
+> See the full demo: `python examples/viral_demo.py`
 
 ## MCP Server
 
@@ -448,39 +487,32 @@ The UCE `adapter_contract` scanner automatically validates that all adapters cor
 ## CLI
 
 ```bash
-# Show version and available adapters
-stateweave version
+# ── Get started in 10 seconds ──
+stateweave quickstart              # zero-code demo: checkpoint, diff, rollback
+stateweave init                    # set up project config (.stateweave/config.toml)
 
-# Dump the Universal Schema as JSON Schema
-stateweave schema -o schema.json
+# ── Debug agent failures ──
+stateweave why my-agent            # autopsy: what changed and where it went wrong
+stateweave doctor                  # diagnostic health checks
 
-# Validate a payload file
-stateweave validate state.json
-
-# Export/import/diff
-stateweave export -f langgraph -a my-agent -o state.json
-stateweave import -f mcp --payload state.json
-stateweave diff before.json after.json
-
-# Auto-detect source framework
-stateweave detect state.json
-
-# Scan environment for installed frameworks
-stateweave scan
-
-# Time travel — checkpoint, history, rollback
+# ── Version control for agent state ──
 stateweave checkpoint state.json --label "before-experiment"
 stateweave history my-agent
 stateweave rollback my-agent 3 -o restored.json
+stateweave diff before.json after.json
 
-# Run diagnostic health checks
-stateweave doctor
+# ── Export / Import / Migrate ──
+stateweave export -f langgraph -a my-agent -o state.json
+stateweave import -f crewai --payload state.json
+stateweave detect state.json       # auto-detect source framework
 
-# List all available adapters
-stateweave adapters
-
-# Scaffold a new adapter
-stateweave generate-adapter my-framework --output-dir ./adapters
+# ── Utilities ──
+stateweave version                 # version, adapters, encryption status
+stateweave adapters                # list all 10 framework adapters
+stateweave scan                    # scan for installed frameworks
+stateweave schema -o schema.json   # dump Universal Schema as JSON Schema
+stateweave validate state.json     # validate a payload file
+stateweave generate-adapter my-framework  # scaffold new adapter
 ```
 
 ## Compliance (UCE)
