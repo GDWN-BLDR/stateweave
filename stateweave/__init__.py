@@ -2,7 +2,7 @@
 """
 StateWeave — git for agent brains.
 ========================================================
-Move, debug, and secure AI agent state across 10 frameworks.
+Debug, time-travel, and migrate AI agent state across 10 frameworks.
 
 Quick Start::
 
@@ -26,7 +26,7 @@ Quick Start::
     mcp.import_state(payload)
 """
 
-__version__ = "0.3.7"
+__version__ = "0.3.8"
 
 
 # Public API — Schema
@@ -37,6 +37,9 @@ from stateweave.adapters.base import AdapterTier, StateWeaveAdapter
 from stateweave.adapters.crewai_adapter import CrewAIAdapter
 from stateweave.adapters.langgraph_adapter import LangGraphAdapter
 from stateweave.adapters.mcp_adapter import MCPAdapter
+
+# Public API — Auto-instrumentation
+from stateweave.auto import auto, get_instrumentor
 from stateweave.core.diff import StateDiff, diff_payloads
 from stateweave.core.encryption import EncryptionFacade
 from stateweave.core.migration import MigrationEngine
@@ -87,4 +90,7 @@ __all__ = [
     # Validation
     "get_schema_json",
     "validate_payload",
+    # Auto-instrumentation
+    "auto",
+    "get_instrumentor",
 ]

@@ -1017,6 +1017,279 @@ def cmd_compare(args):
     print("═" * 60)
 
 
+def cmd_watch(args):
+    """Live agent state dashboard — refreshes every N seconds.
+
+    Like htop for agent brains. Shows all tracked agents with real-time
+    health updates, message counts, and confidence tracking.
+    """
+    import signal
+    import time
+    from datetime import datetime
+
+    from stateweave.core.timetravel import CheckpointStore
+
+    store_dir = args.store_dir if hasattr(args, "store_dir") and args.store_dir else None
+    store = CheckpointStore(store_dir=store_dir)
+    interval = getattr(args, "interval", 2)
+
+    # Handle Ctrl+C gracefully
+    running = [True]
+
+    def handle_sigint(sig, frame):
+        running[0] = False
+
+    signal.signal(signal.SIGINT, handle_sigint)
+
+    print(f"🧶 StateWeave Watch (refreshing every {interval}s, Ctrl+C to quit)")
+    print()
+
+    while running[0]:
+        # Find all agents
+        root = store._root
+        if not root.exists():
+            print("⚠ No .stateweave/checkpoints/ directory found.")
+            break
+
+        agent_dirs = [d for d in root.iterdir() if d.is_dir() and (d / "manifest.json").exists()]
+
+        now = datetime.utcnow()
+        lines = []
+        lines.append(f"  🧶 StateWeave Watch — {now.strftime('%H:%M:%S')} UTC")
+        lines.append("  " + "═" * 60)
+
+        if not agent_dirs:
+            lines.append("  No agents tracked. Run: stateweave quickstart")
+        else:
+            lines.append(
+                f"  {'Agent':<20}│ {'v':>3} │ {'Msgs':>4}"
+                f" │ {'Memory':>7} │ {'Confidence':>10} │ Health"
+            )
+            lines.append(
+                "  "
+                + "─" * 20
+                + "┼"
+                + "─" * 5
+                + "┼"
+                + "─" * 6
+                + "┼"
+                + "─" * 9
+                + "┼"
+                + "─" * 12
+                + "┼"
+                + "─" * 10
+            )
+
+            for agent_dir in sorted(agent_dirs):
+                agent_id = agent_dir.name
+                try:
+                    history = store.history(agent_id)
+                except Exception:
+                    continue
+
+                if not history.checkpoints:
+                    continue
+
+                latest = history.latest
+                if latest is None:
+                    continue
+
+                # Get confidence
+                conf_str = "  n/a"
+                health = "✅"
+                try:
+                    payload = store._load_payload(agent_id, latest.version)
+                    if payload:
+                        wm = payload.cognitive_state.working_memory
+                        for key in ("confidence", "confidence_score", "agent_confidence"):
+                            if key in wm:
+                                try:
+                                    conf = float(wm[key])
+                                    if conf < 0.3:
+                                        conf_str = f"{conf:.2f} 🔴"
+                                        health = "🔴 RISK"
+                                    elif conf < 0.5:
+                                        conf_str = f"{conf:.2f} ⚠"
+                                        health = "⚠ DRIFT"
+                                    else:
+                                        conf_str = f"{conf:.2f} ✅"
+                                except (ValueError, TypeError):
+                                    pass
+                                break
+
+                        if "hallucination_risk" in wm:
+                            health = "🔴 HALLU"
+                except Exception:
+                    pass
+
+                name_display = agent_id[:20]
+                lines.append(
+                    f"  {name_display:<20}│ {latest.version:>3}"
+                    f" │ {latest.message_count:>4}"
+                    f" │ {latest.working_memory_keys:>4} keys"
+                    f" │ {conf_str:>10}"
+                    f" │ {health}"
+                )
+
+        lines.append("  " + "═" * 60)
+        lines.append(f"  {len(agent_dirs)} agent(s) tracked")
+
+        # Clear and print
+        print("\033[H\033[J", end="")  # Clear screen
+        for line in lines:
+            print(line)
+
+        try:
+            time.sleep(interval)
+        except (KeyboardInterrupt, SystemExit):
+            break
+
+    print("\n  👋 Watch stopped.")
+
+
+def cmd_ci(args):
+    """CI integration — verify agent behavior hasn't regressed.
+
+    Compares the current agent state against a baseline checkpoint.
+    Exits with non-zero status if significant regression is detected.
+    Use in CI pipelines to catch agent behavior regressions.
+
+    Usage:
+        stateweave ci my-agent --baseline 1 --current latest
+        stateweave ci my-agent  # defaults: baseline=1, current=latest
+    """
+    import sys as sys_mod
+
+    from stateweave.core.diff import diff_payloads
+    from stateweave.core.timetravel import CheckpointStore
+
+    store_dir = args.store_dir if hasattr(args, "store_dir") and args.store_dir else None
+    store = CheckpointStore(store_dir=store_dir)
+
+    agent_id = args.agent_id
+    history = store.history(agent_id)
+
+    if not history.checkpoints:
+        print(f"⚠ No checkpoints for '{agent_id}'")
+        sys_mod.exit(1)
+
+    # Resolve versions
+    baseline_v = getattr(args, "baseline", 1) or 1
+    current_v = getattr(args, "current", None)
+    if current_v is None or current_v == "latest":
+        if history.latest:
+            current_v = history.latest.version
+        else:
+            print("⚠ No latest checkpoint found")
+            sys_mod.exit(1)
+    else:
+        current_v = int(current_v)
+
+    # Load payloads
+    baseline = store._load_payload(agent_id, baseline_v)
+    current = store._load_payload(agent_id, current_v)
+
+    if not baseline or not current:
+        print(f"⚠ Could not load checkpoints v{baseline_v} and/or v{current_v}")
+        sys_mod.exit(1)
+
+    # Compare
+    diff = diff_payloads(baseline, current)
+
+    print()
+    print("🧶 StateWeave CI — Agent Behavior Verification")
+    print("═" * 60)
+    print(f"  Agent:    {agent_id}")
+    print(f"  Baseline: v{baseline_v}")
+    print(f"  Current:  v{current_v}")
+    print()
+
+    # Check for regression indicators
+    regressions = []
+
+    # 1. Confidence regression
+    baseline_wm = baseline.cognitive_state.working_memory
+    current_wm = current.cognitive_state.working_memory
+
+    baseline_conf = None
+    current_conf = None
+    for key in ("confidence", "confidence_score", "agent_confidence"):
+        if key in baseline_wm:
+            try:
+                baseline_conf = float(baseline_wm[key])
+            except (ValueError, TypeError):
+                pass
+        if key in current_wm:
+            try:
+                current_conf = float(current_wm[key])
+            except (ValueError, TypeError):
+                pass
+
+    if baseline_conf is not None and current_conf is not None:
+        if current_conf < baseline_conf - 0.2:
+            regressions.append(f"Confidence regressed: {baseline_conf:.2f} → {current_conf:.2f}")
+
+    # 2. Message loss
+    baseline_msgs = len(baseline.cognitive_state.conversation_history)
+    current_msgs = len(current.cognitive_state.conversation_history)
+    if current_msgs < baseline_msgs:
+        regressions.append(f"Message loss: {baseline_msgs} → {current_msgs}")
+
+    # 3. Hallucination risk
+    if "hallucination_risk" in current_wm:
+        risk_val = str(current_wm["hallucination_risk"]).upper()
+        if risk_val in ("HIGH", "CRITICAL", "TRUE"):
+            regressions.append(f"Hallucination risk: {risk_val}")
+
+    # 4. Working memory key loss (significant)
+    baseline_keys = set(baseline_wm.keys())
+    current_keys = set(current_wm.keys())
+    lost_keys = baseline_keys - current_keys
+    if len(lost_keys) > 3:
+        regressions.append(f"Lost {len(lost_keys)} working memory keys")
+
+    # Report
+    max_tolerance = getattr(args, "max_changes", None)
+    total_changes = len(diff.entries)
+
+    print("  📊 Diff Summary")
+    print("  ─" * 30)
+    print(f"    Added:    +{diff.added_count}")
+    print(f"    Removed:  -{diff.removed_count}")
+    print(f"    Modified: ~{diff.modified_count}")
+    print(f"    Total:    {total_changes} changes")
+    print()
+
+    if confidence_str := (
+        f"  {baseline_conf:.2f} → {current_conf:.2f}"
+        if baseline_conf is not None and current_conf is not None
+        else "  n/a"
+    ):
+        print(f"  Confidence: {confidence_str}")
+
+    if regressions:
+        print()
+        print("  🔴 REGRESSIONS DETECTED:")
+        for r in regressions:
+            print(f"    ✗ {r}")
+        print()
+        print("  ❌ CI FAILED — agent behavior has regressed")
+        print("═" * 60)
+        sys_mod.exit(1)
+    elif max_tolerance is not None and total_changes > max_tolerance:
+        print()
+        print(f"  ⚠ {total_changes} changes exceeds tolerance ({max_tolerance})")
+        print()
+        print("  ❌ CI FAILED — too many state changes")
+        print("═" * 60)
+        sys_mod.exit(1)
+    else:
+        print()
+        print("  ✅ CI PASSED — no regressions detected")
+        print("═" * 60)
+        sys_mod.exit(0)
+
+
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
@@ -1217,6 +1490,53 @@ def main():
         help="Checkpoint store directory",
     )
 
+    # watch
+    watch_parser = subparsers.add_parser(
+        "watch",
+        help="Live agent state dashboard (like htop for agent brains)",
+    )
+    watch_parser.add_argument(
+        "--interval",
+        "-n",
+        type=int,
+        default=2,
+        help="Refresh interval in seconds (default: 2)",
+    )
+    watch_parser.add_argument(
+        "--store-dir",
+        default=None,
+        help="Checkpoint store directory",
+    )
+
+    # ci
+    ci_parser = subparsers.add_parser(
+        "ci",
+        help="CI integration — verify agent behavior hasn't regressed",
+    )
+    ci_parser.add_argument("agent_id", help="Agent to verify")
+    ci_parser.add_argument(
+        "--baseline",
+        type=int,
+        default=1,
+        help="Baseline version (default: 1)",
+    )
+    ci_parser.add_argument(
+        "--current",
+        default="latest",
+        help="Current version to compare (default: latest)",
+    )
+    ci_parser.add_argument(
+        "--max-changes",
+        type=int,
+        default=None,
+        help="Max allowed state changes before failing",
+    )
+    ci_parser.add_argument(
+        "--store-dir",
+        default=None,
+        help="Checkpoint store directory",
+    )
+
     args = parser.parse_args()
 
     if args.command == "version":
@@ -1259,6 +1579,10 @@ def main():
         cmd_status(args)
     elif args.command == "compare":
         cmd_compare(args)
+    elif args.command == "watch":
+        cmd_watch(args)
+    elif args.command == "ci":
+        cmd_ci(args)
     else:
         parser.print_help()
         sys.exit(1)
