@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "stateweave"
 version = "0.3.5"
-description = "git for agent brains — move, debug, and secure AI agent state across 10 frameworks"
+description = "Sentry for agent brains — debug, time-travel, and migrate AI agent state across 10 frameworks"
 readme = "README.md"
 license = {text = "Apache-2.0"}
 requires-python = ">=3.10"

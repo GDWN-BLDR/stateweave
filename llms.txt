@@ -1,8 +1,8 @@
 # StateWeave
 
-> `git` for agent brains — move, debug, and secure AI agent state across 10 frameworks.
+> Sentry for agent brains — debug, time-travel, and migrate AI agent state across 10 frameworks.
 
-StateWeave lets AI agents move between frameworks (LangGraph, MCP, CrewAI, AutoGen, DSPy, LlamaIndex, OpenAI Agents, Haystack, Letta, Semantic Kernel) while keeping their accumulated knowledge — conversation history, working memory, goals, tool results, and trust parameters.
+StateWeave lets you see exactly where your AI agent went wrong, rewind to any checkpoint, and optionally migrate between frameworks (LangGraph, MCP, CrewAI, AutoGen, DSPy, LlamaIndex, OpenAI Agents, Haystack, Letta, Semantic Kernel) — all while keeping accumulated knowledge intact.
 
 ## Install
 

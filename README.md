@@ -1,7 +1,7 @@
 <p align="center">
   <h1 align="center">🧶 StateWeave</h1>
   <p align="center"><strong><code>git</code> for agent brains.</strong></p>
-  <p align="center"><em>Your agent switches frameworks. Its memories come with it.</em></p>
+  <p align="center"><em>When your agent goes wrong, see exactly where and why. Then rewind.</em></p>
   <p align="center">
     <a href="https://pypi.org/project/stateweave/"><img src="https://img.shields.io/pypi/v/stateweave?color=%2334D058&label=PyPI" alt="PyPI"></a>
     <a href="https://github.com/GDWN-BLDR/stateweave/actions"><img src="https://img.shields.io/github/actions/workflow/status/GDWN-BLDR/stateweave/ci.yml?label=CI" alt="CI"></a>
@@ -14,15 +14,15 @@
 
 <!-- mcp-name: stateweave -->
 
-**StateWeave** moves, debugs, and secures AI agent state across 10 frameworks. Export from LangGraph, import into MCP, checkpoint, rollback, diff, encrypt, sign — all through a single Universal Schema.
+**StateWeave** is Sentry for AI agents — debug, time-travel, and migrate agent state across 10 frameworks. When a 20-step autonomous workflow derails at step 15, see exactly what changed, rewind to step 14, and replay. Export from LangGraph, import into CrewAI with zero data loss. Checkpoint, rollback, diff, encrypt, sign — all through a single Universal Schema.
 
-When your agent needs to switch frameworks, its memories come with it. When a 20-step autonomous workflow derails at step 15, rewind to step 14, fix the issue, and replay. When your enterprise needs to audit agent behavior, every state transition is versioned, signed, and encrypted.
+When your agent hallucinates, crashes, or drifts — `stateweave why` shows you the exact state transition that went wrong. When your enterprise needs to audit agent behavior, every state change is versioned, signed, and encrypted.
 
 ## Why StateWeave?
 
 StateWeave solves three critical problems in the AI agent ecosystem:
 
-🔍 **Debugging** — Agent workflows are non-deterministic. When they go wrong, you need to pause, rewind, inspect, and replay — not restart. StateWeave gives you `git`-like version control for agent cognitive state.
+🔍 **Debugging** — Agent workflows are non-deterministic. When they go wrong, you need to pause, rewind, inspect, and replay — not restart. `stateweave why` shows you the exact state transition that caused the failure. Think of it as Sentry for agent brains.
 
 🔒 **Security** — Agent state contains the agent's entire cognitive history. StateWeave encrypts at rest (AES-256-GCM), signs payloads (Ed25519), strips credentials on export, and enforces compliance policies.
 
