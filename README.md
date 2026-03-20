@@ -14,7 +14,7 @@
 
 <!-- mcp-name: stateweave -->
 
-**StateWeave** is Sentry for AI agents — debug, time-travel, and migrate agent state across 10 frameworks. When a 20-step autonomous workflow derails at step 15, see exactly what changed, rewind to step 14, and replay. Export from LangGraph, import into CrewAI with zero data loss. Checkpoint, rollback, diff, encrypt, sign — all through a single Universal Schema.
+**StateWeave** is `git` for agent brains — debug, time-travel, and migrate agent state across 10 frameworks. When a 20-step autonomous workflow derails at step 15, see exactly what changed, rewind to step 14, and replay. Export from LangGraph, import into CrewAI with zero data loss. Checkpoint, rollback, diff, encrypt, sign — all through a single Universal Schema.
 
 When your agent hallucinates, crashes, or drifts — `stateweave why` shows you the exact state transition that went wrong. When your enterprise needs to audit agent behavior, every state change is versioned, signed, and encrypted.
 
@@ -22,7 +22,7 @@ When your agent hallucinates, crashes, or drifts — `stateweave why` shows you 
 
 StateWeave solves three critical problems in the AI agent ecosystem:
 
-🔍 **Debugging** — Agent workflows are non-deterministic. When they go wrong, you need to pause, rewind, inspect, and replay — not restart. `stateweave why` shows you the exact state transition that caused the failure. Think of it as Sentry for agent brains.
+🔍 **Debugging** — Agent workflows are non-deterministic. When they go wrong, you need to pause, rewind, inspect, and replay — not restart. `stateweave why` shows you the exact state transition that caused the failure. Version control for agent cognition.
 
 🔒 **Security** — Agent state contains the agent's entire cognitive history. StateWeave encrypts at rest (AES-256-GCM), signs payloads (Ed25519), strips credentials on export, and enforces compliance policies.
 
@@ -298,7 +298,7 @@ Every agent's state is represented as a `StateWeavePayload`:
 
 ```python
 StateWeavePayload(
-    stateweave_version="0.3.5",
+    stateweave_version="0.3.7",
     source_framework="langgraph",
     exported_at=datetime,
     cognitive_state=CognitiveState(

@@ -1,8 +1,8 @@
 # StateWeave Documentation
 
-**`git` for agent brains.** Your agent switches frameworks. Its memories come with it.
+**`git` for agent brains.** When your agent goes wrong, see exactly where and why. Then rewind.
 
-StateWeave moves, debugs, and secures AI agent state across 10 frameworks. Export from LangGraph, import into MCP, CrewAI, AutoGen, DSPy, or any of 10 supported frameworks — with zero silent data loss.
+StateWeave debugs, time-travels, and migrates AI agent state across 10 frameworks. Export from LangGraph, import into MCP, CrewAI, AutoGen, DSPy, or any of 10 supported frameworks — with zero silent data loss.
 
 ## Quick Links
 

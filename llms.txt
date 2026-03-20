@@ -1,6 +1,6 @@
 # StateWeave
 
-> Sentry for agent brains — debug, time-travel, and migrate AI agent state across 10 frameworks.
+> `git` for agent brains — debug, time-travel, and migrate AI agent state across 10 frameworks.
 
 StateWeave lets you see exactly where your AI agent went wrong, rewind to any checkpoint, and optionally migrate between frameworks (LangGraph, MCP, CrewAI, AutoGen, DSPy, LlamaIndex, OpenAI Agents, Haystack, Letta, Semantic Kernel) — all while keeping accumulated knowledge intact.
 
@@ -66,7 +66,7 @@ StateWeave ships as an MCP server. Add to your MCP config:
 - State merge with CRDT conflict resolution
 - A2A protocol bridge
 - 12 UCE compliance scanners (serialization safety, import discipline, etc.)
-- 480+ tests
+- 490+ tests
 
 ## Links
 - Source: https://github.com/GDWN-BLDR/stateweave

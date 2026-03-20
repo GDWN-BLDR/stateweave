@@ -12,7 +12,7 @@ pip install stateweave
 
 ```python
 import stateweave
-print(stateweave.__version__)  # 0.3.5
+print(stateweave.__version__)  # 0.3.7
 ```
 
 ## Optional Extras

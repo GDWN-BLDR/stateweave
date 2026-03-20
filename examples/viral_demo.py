@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-StateWeave Viral Demo — "Sentry for Agent Brains"
+StateWeave Viral Demo — git for agent brains
 ====================================================
 This demo tells a story:
 
@@ -60,7 +60,7 @@ def info(msg):
 # ══════════════════════════════════════════════════════════════
 print()
 print("═" * 64)
-print(f"  🧶 StateWeave v{stateweave.__version__} — Sentry for Agent Brains")
+print(f"  🧶 StateWeave v{stateweave.__version__} — git for agent brains")
 print("  Debug, time-travel, and migrate AI agent state")
 print("═" * 64)
 pause(0.8)

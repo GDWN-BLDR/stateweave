@@ -1,6 +1,6 @@
 site_name: StateWeave Documentation
 site_url: https://stateweave.pantollventures.com/docs/
-site_description: git for agent brains — move, debug, and secure AI agent state across 10 frameworks
+site_description: git for agent brains — debug, time-travel, and migrate AI agent state across 10 frameworks
 site_author: Pantoll Ventures
 
 repo_url: https://github.com/GDWN-BLDR/stateweave
