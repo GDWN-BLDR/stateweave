@@ -1,12 +1,14 @@
 """
 StateWeave Real Demo — pip install stateweave → 7 steps
 
-Works without langgraph installed (uses dict-based adapter mode).
+Works without any framework installed (uses create_sample_payload).
 For the real-framework integration demo, see examples/real_langgraph_demo.py.
 """
 
+import stateweave
+
 print("=" * 60)
-print("  StateWeave v0.3.3 — Real End-to-End Demo")
+print(f"  StateWeave v{stateweave.__version__} — Real End-to-End Demo")
 print("=" * 60)
 print()
 
@@ -15,21 +17,18 @@ print("━━ 1. Export from LangGraph ━━")
 from stateweave import LangGraphAdapter, MCPAdapter, diff_payloads
 
 lg = LangGraphAdapter()
-lg._agents["research-agent"] = {
-    "messages": [
-        {"type": "human", "content": "Research quantum computing breakthroughs in 2026"},
-        {"type": "ai", "content": "I found 3 significant developments:\n1. IBM's 100K-qubit roadmap\n2. Google's error-correction milestone\n3. Microsoft's topological qubit breakthrough"},
-        {"type": "human", "content": "Summarize the Google result"},
-        {"type": "ai", "content": "Google achieved below-threshold error correction on Willow, showing that adding more qubits reduces errors."},
-    ],
-    "working_memory": {
+payload = lg.create_sample_payload(
+    agent_id="research-agent",
+    num_messages=5,
+)
+# Enrich with research-specific context
+payload.cognitive_state.working_memory.update(
+    {
         "task": "quantum research",
         "confidence": 0.92,
         "sources_checked": 14,
-    },
-}
-
-payload = lg.export_state("research-agent")
+    }
+)
 print(f"  ✓ Exported {len(payload.cognitive_state.conversation_history)} messages")
 print(f"  ✓ Source framework: {payload.source_framework}")
 print()
@@ -55,18 +54,17 @@ print()
 
 # ── 4. Diff two states ──
 print("━━ 4. Diff Agent States ━━")
-mcp._agents["research-agent"]["messages"].append(
-    {"role": "user", "content": "Implications for drug discovery?"}
-)
-mcp._agents["research-agent"]["working_memory"] = {
-    "task": "quantum research",
-    "confidence": 0.95,
-    "sources_checked": 14,
-    "new_finding": "quantum advantage in molecular simulation",
-}
-modified = mcp.export_state("research-agent")
+from stateweave.schema.v1 import Message
 
-diff = diff_payloads(payload, modified)
+re_export.cognitive_state.conversation_history.append(
+    Message(role="human", content="Implications for drug discovery?")
+)
+re_export.cognitive_state.working_memory["new_finding"] = (
+    "quantum advantage in molecular simulation"
+)
+re_export.cognitive_state.working_memory["confidence"] = 0.95
+
+diff = diff_payloads(payload, re_export)
 print(f"  Has changes: {diff.has_changes}")
 print(f"  Summary:     {diff.summary}")
 print()
@@ -79,7 +77,7 @@ store = CheckpointStore()
 v1 = store.checkpoint(payload, label="initial-research")
 print(f"  ✓ Checkpoint v1 (label: {v1.label}, hash: {v1.hash[:12]}...)")
 
-v2 = store.checkpoint(modified, label="after-drug-discovery")
+v2 = store.checkpoint(re_export, label="after-drug-discovery")
 print(f"  ✓ Checkpoint v2 (label: {v2.label}, hash: {v2.hash[:12]}...)")
 
 history = store.history("research-agent")
@@ -103,7 +101,7 @@ facade = EncryptionFacade.from_passphrase("demo-passphrase-2026")
 ciphertext, nonce = facade.encrypt(raw)
 print(f"  ✓ Plaintext:  {len(raw):,} bytes")
 print(f"  ✓ Ciphertext: {len(ciphertext):,} bytes")
-print(f"  ✓ Algorithm:  AES-256-GCM")
+print("  ✓ Algorithm:  AES-256-GCM")
 
 decrypted = facade.decrypt(ciphertext, nonce)
 restored = serializer.loads(decrypted)

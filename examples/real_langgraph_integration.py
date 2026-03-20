@@ -14,9 +14,9 @@ Run:
 """
 
 from stateweave import (
-    LangGraphAdapter,
     CrewAIAdapter,
     EncryptionFacade,
+    LangGraphAdapter,
     MigrationEngine,
     StateWeaveSerializer,
     diff_payloads,
@@ -137,7 +137,9 @@ def main():
     print("\n🔍 Diffing original vs imported...")
     diff = diff_payloads(payload, crew_payload)
     print(f"   Changes: {len(diff.entries)}")
-    print(f"   Added: {diff.added_count} | Removed: {diff.removed_count} | Modified: {diff.modified_count}")
+    print(
+        f"   Added: {diff.added_count} | Removed: {diff.removed_count} | Modified: {diff.modified_count}"
+    )
 
     print("\n🧶 Real-world migration complete: LangGraph → (encrypted) → CrewAI")
     print("   Agent's analysis, messages, and tool results survived the journey.")

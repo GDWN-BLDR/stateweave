@@ -3,12 +3,15 @@ StateWeave Demo — Recording-Friendly Version
 Adds pauses between steps so the GIF/asciicast is readable.
 NOT for production use — use full_demo.py for actual demos.
 """
-import time
+
 import sys
+import time
+
 
 def pause(seconds=0.8):
     sys.stdout.flush()
     time.sleep(seconds)
+
 
 def type_line(text, delay=0.03):
     """Simulate typing for the command lines."""
@@ -17,6 +20,7 @@ def type_line(text, delay=0.03):
         sys.stdout.flush()
         time.sleep(delay)
     print()
+
 
 # Opening
 print()
@@ -45,9 +49,15 @@ lg = LangGraphAdapter()
 lg._agents["research-agent"] = {
     "messages": [
         {"type": "human", "content": "Research quantum computing breakthroughs in 2026"},
-        {"type": "ai", "content": "I found 3 significant developments:\n1. IBM's 100K-qubit roadmap\n2. Google's error-correction milestone\n3. Microsoft's topological qubit breakthrough"},
+        {
+            "type": "ai",
+            "content": "I found 3 significant developments:\n1. IBM's 100K-qubit roadmap\n2. Google's error-correction milestone\n3. Microsoft's topological qubit breakthrough",
+        },
         {"type": "human", "content": "Summarize the Google result"},
-        {"type": "ai", "content": "Google achieved below-threshold error correction on Willow, showing that adding more qubits reduces errors."},
+        {
+            "type": "ai",
+            "content": "Google achieved below-threshold error correction on Willow, showing that adding more qubits reduces errors.",
+        },
     ],
     "working_memory": {
         "task": "quantum research",

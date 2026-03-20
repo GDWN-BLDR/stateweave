@@ -141,9 +141,9 @@ class TestCLI:
             text=True,
         )
         assert result.returncode == 0
+        assert "stateweave quickstart" in result.stdout
         assert "stateweave version" in result.stdout
-        assert "stateweave schema" in result.stdout
-        assert "stateweave validate" in result.stdout
+        assert "stateweave why" in result.stdout
 
     def test_no_command_shows_help(self):
         result = subprocess.run(

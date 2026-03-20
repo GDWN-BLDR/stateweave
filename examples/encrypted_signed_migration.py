@@ -35,8 +35,8 @@ def main():
     private_key, public_key = EncryptionFacade.generate_signing_keypair()
 
     print("🔐 Security Setup:")
-    print(f"   Encryption: AES-256-GCM")
-    print(f"   Signing: Ed25519")
+    print("   Encryption: AES-256-GCM")
+    print("   Signing: Ed25519")
     print(f"   Key ID: {EncryptionFacade._compute_key_id(encryption_key)}")
 
     # ── Step 1: Create and export agent state ──
@@ -121,7 +121,7 @@ def main():
     tampered_bytes = decrypted + b"INJECTED_MALICIOUS_DATA"
     is_tampered = EncryptionFacade.verify(tampered_bytes, signature_b64, public_key)
     print(f"   Tampered payload verification: {is_tampered}")
-    print(f"   ✅ Tampering correctly detected!" if not is_tampered else "   ❌ BUG!")
+    print("   ✅ Tampering correctly detected!" if not is_tampered else "   ❌ BUG!")
 
     print("\n🧶 Full pipeline complete: Export → Sign → Encrypt → Decrypt → Verify → Import")
 

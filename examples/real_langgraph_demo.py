@@ -8,7 +8,7 @@ Run this to see StateWeave working with a REAL LangGraph graph.
     python examples/real_langgraph_demo.py
 """
 
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, MessagesState, StateGraph
 
@@ -65,7 +65,7 @@ def main():
     print(f"    Messages captured: {len(payload.cognitive_state.conversation_history)}")
     print(f"    Working memory keys: {len(payload.cognitive_state.working_memory)}")
     print(f"    Non-portable warnings: {len(payload.non_portable_warnings)}")
-    print(f"    ✓ Export complete")
+    print("    ✓ Export complete")
 
     # Step 4: Serialize to JSON
     print("\n[4] Serializing payload to JSON...")
@@ -73,7 +73,7 @@ def main():
     serializer = StateWeaveSerializer()
     json_bytes = serializer.dumps(payload)
     print(f"    Payload size: {len(json_bytes):,} bytes")
-    print(f"    ✓ Serialized to JSON (Pydantic validation passed)")
+    print("    ✓ Serialized to JSON (Pydantic validation passed)")
 
     # Step 5: Import into MCP adapter
     print("\n[5] Importing into MCP adapter...")
@@ -82,7 +82,7 @@ def main():
     result = mcp_adapter.import_state(payload)
     print(f"    Agent ID: {result['agent_id']}")
     print(f"    Import source: {result['import_source']}")
-    print(f"    ✓ State imported into MCP")
+    print("    ✓ State imported into MCP")
 
     # Step 6: Verify round-trip
     print("\n[6] Verifying round-trip integrity...")

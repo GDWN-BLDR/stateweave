@@ -31,8 +31,26 @@ ADAPTERS = ADAPTER_REGISTRY
 def cmd_version(args):
     """Print version information."""
     print(f"stateweave {stateweave.__version__}")
-    print(f"Python {sys.version}")
-    print(f"Adapters: {', '.join(ADAPTERS.keys())}")
+    print(f"Python {sys.version.split()[0]}")
+    print(f"Adapters: {len(ADAPTERS)} frameworks ({', '.join(sorted(ADAPTERS.keys()))})")
+
+    # Encryption availability
+    try:
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM  # noqa: F401
+
+        print("Encryption: AES-256-GCM ✓")
+    except ImportError:
+        print("Encryption: not available (pip install cryptography)")
+
+    # Checkpoint store
+    from stateweave.core.timetravel import CheckpointStore
+
+    store = CheckpointStore()
+    agents = store.list_agents()
+    if agents:
+        print(f"Checkpoint store: {len(agents)} agent(s) ({', '.join(agents[:5])})")
+    else:
+        print("Checkpoint store: empty")
 
 
 def cmd_export(args):
@@ -442,6 +460,98 @@ def cmd_why(args):
     print("═" * 60)
 
 
+def cmd_quickstart(args):
+    """Run an instant demo of StateWeave — no code required.
+
+    Creates a sample agent, checkpoints it, modifies state,
+    checkpoints again, then shows the diff and analysis.
+    """
+    import tempfile
+
+    from stateweave.core.timetravel import CheckpointStore
+    from stateweave.schema.v1 import Message
+
+    fw = args.framework if hasattr(args, "framework") and args.framework else "langgraph"
+    if fw not in ADAPTERS:
+        print(f"Error: Unknown framework '{fw}'", file=sys.stderr)
+        print(f"Available: {', '.join(sorted(ADAPTERS.keys()))}", file=sys.stderr)
+        sys.exit(1)
+
+    adapter = ADAPTERS[fw]()
+    agent_id = "quickstart-agent"
+
+    print("🧶 StateWeave Quickstart")
+    print("═" * 60)
+    print(f"  Framework: {fw}")
+    print()
+
+    # Step 1: Create sample payload
+    print("━━ Step 1: Create sample agent state ━━")
+    payload = adapter.create_sample_payload(agent_id=agent_id, num_messages=3)
+    print(f"  ✓ Agent: {payload.metadata.agent_id}")
+    print(f"  ✓ Messages: {len(payload.cognitive_state.conversation_history)}")
+    print(f"  ✓ Working memory: {list(payload.cognitive_state.working_memory.keys())}")
+    print()
+
+    # Step 2: Checkpoint
+    print("━━ Step 2: Checkpoint (like git commit) ━━")
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        store = CheckpointStore(store_dir=tmp_dir)
+        cp1 = store.checkpoint(payload, agent_id=agent_id, label="initial state")
+        print(f"  ✓ v{cp1.version} saved (hash: {cp1.hash[:16]}...)")
+        print()
+
+        # Step 3: Modify state
+        print("━━ Step 3: Simulate agent work ━━")
+        payload.cognitive_state.conversation_history.append(
+            Message(role="human", content="Show me a chart of the trends")
+        )
+        payload.cognitive_state.conversation_history.append(
+            Message(
+                role="assistant",
+                content="Here's the trend analysis. Electronics grew 15% QoQ.",
+            )
+        )
+        payload.cognitive_state.working_memory["chart_generated"] = True
+        payload.cognitive_state.working_memory["confidence"] = 0.95
+        print("  ✓ Added 2 messages, updated working memory")
+        print(f"  ✓ Messages now: {len(payload.cognitive_state.conversation_history)}")
+        print()
+
+        # Step 4: Checkpoint again
+        print("━━ Step 4: Checkpoint again ━━")
+        cp2 = store.checkpoint(payload, agent_id=agent_id, label="after analysis")
+        print(f"  ✓ v{cp2.version} saved (hash: {cp2.hash[:16]}...)")
+        print()
+
+        # Step 5: Diff
+        print("━━ Step 5: Diff the two versions ━━")
+        diff = store.diff_versions(agent_id, 1, 2)
+        print(
+            f"  Changes: {len(diff.entries)} "
+            f"(+{diff.added_count} added, ~{diff.modified_count} modified)"
+        )
+        for entry in diff.entries[:5]:
+            print(f"    {entry}")
+        print()
+
+        # Step 6: Rollback
+        print("━━ Step 6: Rollback to v1 ━━")
+        restored = store.rollback(agent_id, version=1)
+        print(f"  ✓ Restored v1: {len(restored.cognitive_state.conversation_history)} messages")
+        print(f"  ✓ Working memory: {list(restored.cognitive_state.working_memory.keys())}")
+        print()
+
+    print("═" * 60)
+    print("  ✅ Quickstart complete!")
+    print()
+    print("  Next steps:")
+    print("    stateweave doctor          — check your environment")
+    print("    stateweave adapters         — list all 10 framework adapters")
+    print("    stateweave why <agent-id>   — analyze checkpoint history")
+    print("═" * 60)
+
+
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
@@ -449,12 +559,12 @@ def main():
         description="🧶 StateWeave — git for agent brains",
         epilog=(
             "Examples:\n"
+            "  stateweave quickstart\n"
             "  stateweave version\n"
-            "  stateweave schema -o schema.json\n"
-            "  stateweave validate state.json\n"
             "  stateweave export -f langgraph -a my-agent -o state.json\n"
             "  stateweave import -f mcp --payload state.json\n"
             "  stateweave diff before.json after.json\n"
+            "  stateweave why my-agent\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -474,12 +584,14 @@ def main():
     validate_parser.add_argument("payload", help="Path to StateWeavePayload JSON file")
 
     # export
+    fw_help = f"Source framework ({', '.join(sorted(ADAPTERS.keys()))})"
     export_parser = subparsers.add_parser("export", help="Export agent state")
     export_parser.add_argument(
         "--framework",
         "-f",
         required=True,
-        help="Source framework (langgraph, mcp, crewai, autogen)",
+        choices=sorted(ADAPTERS.keys()),
+        help=fw_help,
     )
     export_parser.add_argument("--agent-id", "-a", required=True, help="Agent identifier")
     export_parser.add_argument("--output", "-o", help="Output file (default: stdout)")
@@ -492,7 +604,8 @@ def main():
         "--framework",
         "-f",
         required=True,
-        help="Target framework (langgraph, mcp, crewai, autogen)",
+        choices=sorted(ADAPTERS.keys()),
+        help=f"Target framework ({', '.join(sorted(ADAPTERS.keys()))})",
     )
     import_parser.add_argument("--payload", required=True, help="StateWeavePayload JSON file")
     import_parser.add_argument("--agent-id", "-a", help="Override target agent ID")
@@ -557,6 +670,19 @@ def main():
         help="Show detailed diff entries for each transition",
     )
 
+    # quickstart
+    qs_parser = subparsers.add_parser(
+        "quickstart",
+        help="Run an instant demo — no code required",
+    )
+    qs_parser.add_argument(
+        "--framework",
+        "-f",
+        default="langgraph",
+        choices=sorted(ADAPTERS.keys()),
+        help="Framework to demo (default: langgraph)",
+    )
+
     args = parser.parse_args()
 
     if args.command == "version":
@@ -589,6 +715,8 @@ def main():
         cmd_doctor(args)
     elif args.command == "why":
         cmd_why(args)
+    elif args.command == "quickstart":
+        cmd_quickstart(args)
     else:
         parser.print_help()
         sys.exit(1)

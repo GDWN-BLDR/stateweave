@@ -17,30 +17,36 @@ import time
 
 # ── Helpers ──
 
+
 def pause(s=0.6):
     sys.stdout.flush()
     time.sleep(s)
+
 
 def section(num, title):
     print(f"\n━━ {num}. {title} ━━")
     pause(0.3)
 
+
 def ok(msg):
     print(f"  ✓ {msg}")
     pause(0.2)
+
 
 def warn(msg):
     print(f"  ⚠ {msg}")
     pause(0.2)
 
+
 def info(msg):
     print(f"  → {msg}")
     pause(0.2)
 
+
 # ── Check dependencies ──
 
 try:
-    from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+    from langchain_core.messages import AIMessage, HumanMessage
     from langgraph.checkpoint.memory import MemorySaver
     from langgraph.graph import END, START, MessagesState, StateGraph
 except ImportError:
@@ -49,11 +55,11 @@ except ImportError:
     sys.exit(1)
 
 from stateweave import (
+    EncryptionFacade,
     LangGraphAdapter,
     MCPAdapter,
-    diff_payloads,
-    EncryptionFacade,
     StateWeaveSerializer,
+    diff_payloads,
 )
 from stateweave.core.timetravel import CheckpointStore
 
@@ -71,27 +77,29 @@ section(1, "Build Real LangGraph Agent")
 checkpointer = MemorySaver()
 
 # Simulated tool call responses (in production these would be LLM calls)
-RESPONSES = iter([
-    "Based on my research, there are 3 key quantum computing breakthroughs in 2026:\n"
-    "1. IBM's 100K-qubit roadmap achieved\n"
-    "2. Google's error-correction milestone on Willow\n"
-    "3. Microsoft's topological qubit breakthrough",
+RESPONSES = iter(
+    [
+        "Based on my research, there are 3 key quantum computing breakthroughs in 2026:\n"
+        "1. IBM's 100K-qubit roadmap achieved\n"
+        "2. Google's error-correction milestone on Willow\n"
+        "3. Microsoft's topological qubit breakthrough",
+        "Google achieved below-threshold quantum error correction on their Willow chip. "
+        "By adding more physical qubits, the logical error rate actually decreased — "
+        "proving that quantum error correction scales. This is the key milestone needed "
+        "for fault-tolerant quantum computing.",
+        "The drug discovery implications are significant: quantum simulation can model "
+        "molecular interactions that classical computers cannot. Google's error correction "
+        "milestone means we're 3-5 years from quantum advantage in molecular simulation, "
+        "which could cut drug development timelines by 40-60%.",
+    ]
+)
 
-    "Google achieved below-threshold quantum error correction on their Willow chip. "
-    "By adding more physical qubits, the logical error rate actually decreased — "
-    "proving that quantum error correction scales. This is the key milestone needed "
-    "for fault-tolerant quantum computing.",
-
-    "The drug discovery implications are significant: quantum simulation can model "
-    "molecular interactions that classical computers cannot. Google's error correction "
-    "milestone means we're 3-5 years from quantum advantage in molecular simulation, "
-    "which could cut drug development timelines by 40-60%.",
-])
 
 def research_node(state: MessagesState):
     """Real LangGraph node that processes messages."""
     response = next(RESPONSES, "No more pre-scripted responses.")
     return {"messages": [AIMessage(content=response)]}
+
 
 # Build the real graph
 builder = StateGraph(MessagesState)
@@ -213,7 +221,7 @@ ok(f"Checkpoint v2: {v2.label} (hash: {v2.hash[:12]}...)")
 # Rollback to pre-materials state
 rolled_back = store.rollback(result["agent_id"], version=1)
 ok(f"Rolled back to v1 → {len(rolled_back.cognitive_state.conversation_history)} messages")
-ok(f"Materials science analysis undone — agent brain restored")
+ok("Materials science analysis undone — agent brain restored")
 
 # ── 7. Encrypt the state for secure transport ──
 section(7, "Encrypt State for Secure Transport")
