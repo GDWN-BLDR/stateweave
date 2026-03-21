@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [0.3.13] — 2026-03-21
+
+### Added
+
+- **`stateweave inspect`** — Pretty-print any payload file with structured summary (agent, cognitive state, warnings, audit trail, file stats)
+- **`stateweave try`** — Interactive migration picker: numbered framework list, pick source and target, runs migrate automatically
+- **`stateweave stats`** — Aggregate dashboard showing tracked agents, checkpoint counts, store size
+- **`stateweave completions`** — Generate shell completions for bash, zsh, and fish
+- **Quickstart funnel** — Updated "What to try next" hints to promote `migrate`, `try`, `benchmark`, `inspect`
+
+### Changed
+
+- **README** — Expanded CLI reference to 33 commands with new `inspect`, `try`, `stats`, `completions` entries
+- **llms.txt** — Added 4 new feature entries for the new commands
+
+---
 
 ## [0.3.12] — 2026-03-21
 

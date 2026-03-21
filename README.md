@@ -560,19 +560,23 @@ stateweave diff before.json after.json
 stateweave export -f langgraph -a my-agent -o state.json
 stateweave import -f crewai --payload state.json
 stateweave detect state.json       # auto-detect source framework
+stateweave inspect state.json      # pretty-print payload with structured summary
 
 # ── Monitoring ──
 stateweave watch                   # live agent health dashboard (htop for brains)
 stateweave status my-agent         # agent state summary
+stateweave stats                   # aggregate dashboard: agents, checkpoints, store size
 stateweave ci my-agent             # CI regression detection (exits non-zero on failure)
 
 # ── Utilities ──
+stateweave try                     # interactive migration picker
 stateweave version                 # version, adapters, encryption status
 stateweave adapters                # list all 10 framework adapters
 stateweave scan                    # scan for installed frameworks
 stateweave schema -o schema.json   # dump Universal Schema as JSON Schema
 stateweave validate state.json     # validate a payload file
 stateweave generate-adapter my-framework  # scaffold new adapter
+stateweave completions bash        # generate shell completions (bash/zsh/fish)
 ```
 
 ## Compliance (UCE)

@@ -70,6 +70,10 @@ StateWeave ships as an MCP server. Add to your MCP config:
 - Round-trip fidelity benchmark (`stateweave benchmark` — tests all 10 frameworks)
 - Agent time travel (checkpoint, rollback, branch, diff)
 - git-style CLI: `log`, `blame`, `stash`, `pop`, `replay`, `status`, `compare`
+- Payload inspection (`stateweave inspect` — pretty-print any payload file)
+- Interactive migration picker (`stateweave try` — choose frameworks interactively)
+- Agent dashboard (`stateweave stats` — aggregate checkpoint statistics)
+- Shell completions (`stateweave completions bash/zsh/fish`)
 - Live agent dashboard (`stateweave watch`)
 - CI regression detection (`stateweave ci` — exits non-zero on behavior regression)
 - AES-256-GCM encryption with Ed25519 payload signing

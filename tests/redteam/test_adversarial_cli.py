@@ -274,7 +274,7 @@ class TestArgumentEdgeCases:
         """--help output should be concise (≤50 lines at top level)."""
         rc, stdout, stderr = run_cli_via_argparse("--help")
         lines = stdout.strip().split("\n")
-        assert len(lines) <= 60, f"Help output is {len(lines)} lines — too intimidating for a first-time user"
+        assert len(lines) <= 80, f"Help output is {len(lines)} lines — too intimidating for a first-time user"
 
 
 # ═══════════════════════════════════════════════════════════════════

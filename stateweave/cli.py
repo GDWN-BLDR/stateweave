@@ -570,10 +570,13 @@ def cmd_quickstart(args):
     print("═" * 60)
     print("  ✅ Quickstart complete!")
     print()
-    print("  Next steps:")
-    print("    stateweave doctor          — check your environment")
-    print("    stateweave adapters         — list all 10 framework adapters")
-    print("    stateweave why <agent-id>   — analyze checkpoint history")
+    print("  What to try next:")
+    print("    stateweave try             — interactive migration (pick source & target)")
+    print("    stateweave migrate --from langgraph --to crewai --agent my-agent")
+    print("    stateweave benchmark       — round-trip fidelity test (all 10 frameworks)")
+    print("    stateweave inspect state.json  — pretty-print any payload")
+    print("    stateweave stats           — dashboard of all tracked agents")
+    print("    stateweave why <agent-id>  — analyze what went wrong")
     print("═" * 60)
 
 
@@ -1565,8 +1568,183 @@ def cmd_ci(args):
         print("═" * 60)
         sys_mod.exit(0)
 
+def cmd_try(args):
+    """Interactive migration picker — choose source and target frameworks."""
+    frameworks = sorted(ADAPTERS.keys())
+
+    print()
+    print("  🧶 StateWeave — Try a Migration")
+    print(f"  {'═' * 44}")
+    print()
+    print("  Available frameworks:")
+    for i, fw in enumerate(frameworks, 1):
+        adapter = ADAPTERS[fw]()
+        tier = getattr(adapter, "tier", None)
+        tier_str = f" ({tier.value})" if tier else ""
+        print(f"    {i:2d}. {fw}{tier_str}")
+    print()
+
+    try:
+        src_input = input("  Source framework (number or name): ").strip()
+        if src_input.isdigit():
+            idx = int(src_input) - 1
+            if 0 <= idx < len(frameworks):
+                source = frameworks[idx]
+            else:
+                print("Invalid selection.", file=sys.stderr)
+                sys.exit(1)
+        elif src_input in ADAPTERS:
+            source = src_input
+        else:
+            print(f"Unknown framework: {src_input}", file=sys.stderr)
+            sys.exit(1)
+
+        tgt_input = input("  Target framework (number or name): ").strip()
+        if tgt_input.isdigit():
+            idx = int(tgt_input) - 1
+            if 0 <= idx < len(frameworks):
+                target = frameworks[idx]
+            else:
+                print("Invalid selection.", file=sys.stderr)
+                sys.exit(1)
+        elif tgt_input in ADAPTERS:
+            target = tgt_input
+        else:
+            print(f"Unknown framework: {tgt_input}", file=sys.stderr)
+            sys.exit(1)
+    except (EOFError, KeyboardInterrupt):
+        print("\n  Cancelled.")
+        sys.exit(0)
+
+    if source == target:
+        print(f"\n  Source and target are the same ({source}). Pick different frameworks.", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"\n  Running: stateweave migrate --from {source} --to {target} --agent demo-agent\n")
+
+    # Create a namespace that mimics migrate args
+    migrate_args = argparse.Namespace(
+        source=source,
+        target=target,
+        agent_id="demo-agent",
+        output=None,
+        encrypt=False,
+        passphrase=None,
+    )
+    cmd_migrate(migrate_args)
+
+
+def cmd_inspect(args):
+
+    """Pretty-print a StateWeave payload file with structured summary."""
+    import os
+
+    filepath = args.payload
+    if not os.path.isfile(filepath):
+        print(f"Error: File not found: {filepath}", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        with open(filepath) as f:
+            data = json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"Error: Invalid JSON: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    print()
+    print("  🧶 StateWeave Payload Inspector")
+    print(f"  {'═' * 48}")
+    print()
+
+    # Top-level metadata
+    version = data.get("stateweave_version", "—")
+    source = data.get("source_framework", "—")
+    exported = data.get("exported_at", "—")
+    print(f"  Schema version:  {version}")
+    print(f"  Source framework: {source}")
+    print(f"  Exported at:     {exported}")
+
+    # Agent metadata
+    meta = data.get("metadata", {})
+    if meta:
+        print(f"\n  ━━ Agent ━━")
+        print(f"    ID:     {meta.get('agent_id', '—')}")
+        if meta.get("agent_name"):
+            print(f"    Name:   {meta['agent_name']}")
+        if meta.get("access_policy"):
+            print(f"    Policy: {meta['access_policy']}")
+
+    # Cognitive state
+    cs = data.get("cognitive_state", {})
+    if cs:
+        msgs = cs.get("conversation_history", [])
+        wm = cs.get("working_memory", {})
+        goals = cs.get("goal_tree", {})
+        tools = cs.get("tool_results_cache", {})
+        trust = cs.get("trust_parameters", {})
+        ltm = cs.get("long_term_memory", {})
+        episodic = cs.get("episodic_memory", [])
+
+        print(f"\n  ━━ Cognitive State ━━")
+        print(f"    Messages:       {len(msgs)}")
+        print(f"    Memory keys:    {len(wm)}")
+        if wm:
+            keys_preview = ", ".join(list(wm.keys())[:5])
+            if len(wm) > 5:
+                keys_preview += f" (+{len(wm) - 5} more)"
+            print(f"    Memory preview: {keys_preview}")
+        print(f"    Goals:          {len(goals)}")
+        print(f"    Tool cache:     {len(tools)}")
+        print(f"    Trust params:   {len(trust)}")
+        print(f"    Long-term mem:  {len(ltm)}")
+        print(f"    Episodic mem:   {len(episodic)}")
+
+        # Show last message preview
+        if msgs:
+            last = msgs[-1]
+            role = last.get("role", "?")
+            content = str(last.get("content", ""))
+            if len(content) > 60:
+                content = content[:57] + "..."
+            print(f"\n    Last message [{role}]: {content}")
+
+    # Non-portable warnings
+    warnings = data.get("non_portable_warnings", [])
+    if warnings:
+        print(f"\n  ━━ Warnings ({len(warnings)}) ━━")
+        for w in warnings[:3]:
+            if isinstance(w, dict):
+                print(f"    ⚠️  [{w.get('severity', '?')}] {w.get('key', w)}")
+            else:
+                print(f"    ⚠️  {w}")
+        if len(warnings) > 3:
+            print(f"    ... and {len(warnings) - 3} more")
+
+    # Audit trail
+    audit = data.get("audit_trail", [])
+    if audit:
+        print(f"\n  ━━ Audit Trail ({len(audit)} entries) ━━")
+        for entry in audit[-3:]:
+            if isinstance(entry, dict):
+                print(f"    {entry.get('timestamp', '?')} — {entry.get('operation', '?')}")
+            else:
+                print(f"    {entry}")
+
+    # File stats
+    file_size = os.path.getsize(filepath)
+    print(f"\n  ━━ File ━━")
+    if file_size > 1024 * 1024:
+        print(f"    Size: {file_size / 1024 / 1024:.1f} MB")
+    elif file_size > 1024:
+        print(f"    Size: {file_size / 1024:.1f} KB")
+    else:
+        print(f"    Size: {file_size} bytes")
+    print(f"    Path: {filepath}")
+    print()
+
 
 def cmd_migrate(args):
+
     """One-command framework migration: export → import → verify."""
     import time
 
@@ -1878,6 +2056,12 @@ def main():
     # adapters
     subparsers.add_parser("adapters", help="List all available framework adapters")
 
+    # inspect
+    inspect_parser = subparsers.add_parser(
+        "inspect", help="Pretty-print a payload file with structured summary"
+    )
+    inspect_parser.add_argument("payload", help="Payload JSON file to inspect")
+
     # generate-adapter
     gen_parser = subparsers.add_parser(
         "generate-adapter", help="Generate scaffold for a new framework adapter"
@@ -2109,6 +2293,17 @@ def main():
     benchmark_parser.add_argument("--frameworks", nargs="*", help="Specific frameworks to test")
     benchmark_parser.add_argument("--verbose", "-v", action="store_true", help="Show per-framework details")
 
+    # try (interactive)
+    subparsers.add_parser("try", help="Interactive migration picker — choose source and target")
+
+    # stats
+    stats_parser = subparsers.add_parser("stats", help="Show aggregate checkpoint and agent statistics")
+    stats_parser.add_argument("--store-dir", default=None, help="Checkpoint store directory")
+
+    # completions
+    comp_parser = subparsers.add_parser("completions", help="Generate shell completions (bash/zsh/fish)")
+    comp_parser.add_argument("shell", choices=["bash", "zsh", "fish"], help="Shell type")
+
     args = parser.parse_args()
 
     if args.command == "version":
@@ -2167,9 +2362,87 @@ def main():
         cmd_migrate(args)
     elif args.command == "benchmark":
         cmd_benchmark(args)
+    elif args.command == "inspect":
+        cmd_inspect(args)
+    elif args.command == "try":
+        cmd_try(args)
+    elif args.command == "stats":
+        cmd_stats(args)
+    elif args.command == "completions":
+        from stateweave.completions import generate_bash, generate_zsh, generate_fish
+        if args.shell == "bash":
+            print(generate_bash())
+        elif args.shell == "zsh":
+            print(generate_zsh())
+        elif args.shell == "fish":
+            print(generate_fish())
     else:
         parser.print_help()
         sys.exit(1)
+
+
+def cmd_stats(args):
+    """Show aggregate checkpoint and agent statistics."""
+    import os
+
+    from stateweave.core.timetravel import CheckpointStore
+
+    store_dir = args.store_dir if hasattr(args, "store_dir") and args.store_dir else None
+    store = CheckpointStore(store_dir=store_dir) if store_dir else CheckpointStore()
+
+    agents = store.list_agents()
+
+    print()
+    print("  🧶 StateWeave Dashboard")
+    print(f"  {'═' * 44}")
+    print()
+
+    total_checkpoints = 0
+    if not agents:
+        print("  No agents tracked yet.")
+        print("  Run: stateweave quickstart")
+    else:
+        print(f"  {'Agent':<25} {'Checkpoints':<15} {'Latest'}")
+        print(f"  {'─' * 25} {'─' * 15} {'─' * 20}")
+
+        for agent_id in sorted(agents):
+            try:
+                history = store.get_history(agent_id)
+                cp_count = len(history)
+                total_checkpoints += cp_count
+                latest = history[-1] if history else None
+                latest_label = latest.label if latest and hasattr(latest, "label") else "—"
+                print(f"  {agent_id:<25} {cp_count:<15} {latest_label}")
+            except Exception:
+                print(f"  {agent_id:<25} {'?':<15} {'error reading'}")
+
+        print(f"\n  ────────────────────────────────────────────")
+        print(f"  Agents: {len(agents)}")
+        print(f"  Total checkpoints: {total_checkpoints}")
+
+    # Store info
+    store_path = store._store_dir if hasattr(store, "_store_dir") else "~/.stateweave/checkpoints"
+    if hasattr(store, "_store_dir") and os.path.isdir(str(store._store_dir)):
+        # Calculate store size
+        total_size = 0
+        for dirpath, _dirnames, filenames in os.walk(str(store._store_dir)):
+            for f in filenames:
+                fp = os.path.join(dirpath, f)
+                try:
+                    total_size += os.path.getsize(fp)
+                except OSError:
+                    pass
+        if total_size > 1024 * 1024:
+            size_str = f"{total_size / 1024 / 1024:.1f} MB"
+        elif total_size > 1024:
+            size_str = f"{total_size / 1024:.1f} KB"
+        else:
+            size_str = f"{total_size} bytes"
+        print(f"  Store size: {size_str}")
+
+    print(f"  Store path: {store_path}")
+    print(f"  Adapters: {len(ADAPTERS)} frameworks")
+    print()
 
 
 if __name__ == "__main__":
