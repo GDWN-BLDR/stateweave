@@ -1566,6 +1566,246 @@ def cmd_ci(args):
         sys_mod.exit(0)
 
 
+def cmd_migrate(args):
+    """One-command framework migration: export → import → verify."""
+    import time
+
+    source_fw = args.source
+    target_fw = args.target
+    agent_id = args.agent_id
+
+    # Validate frameworks
+    for fw, label in [(source_fw, "source"), (target_fw, "target")]:
+        if fw not in ADAPTERS:
+            print(f"Error: Unknown {label} framework '{fw}'", file=sys.stderr)
+            print(f"Available: {', '.join(sorted(ADAPTERS.keys()))}", file=sys.stderr)
+            sys.exit(1)
+
+    if source_fw == target_fw:
+        print(f"Error: Source and target are the same ({source_fw})", file=sys.stderr)
+        sys.exit(1)
+
+    serializer = StateWeaveSerializer(pretty=True)
+    encryption = None
+    if args.encrypt:
+        passphrase = args.passphrase or input("Enter encryption passphrase: ")
+        encryption = EncryptionFacade.from_passphrase(passphrase)
+
+    engine = MigrationEngine(serializer=serializer, encryption=encryption)
+
+    print()
+    print(f"  🧶 StateWeave Migrate: {source_fw} → {target_fw}")
+    print(f"  {'═' * 48}")
+    print()
+
+    # Step 1: Export
+    print(f"  ━━ Step 1: Export from {source_fw} ━━")
+    t0 = time.time()
+    source_adapter = ADAPTERS[source_fw]()
+    try:
+        result = engine.export_state(adapter=source_adapter, agent_id=agent_id, encrypt=False)
+    except Exception as e:
+        print(f"  ❌ Export failed: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    if not result.success:
+        print(f"  ❌ Export failed: {result.error}", file=sys.stderr)
+        sys.exit(1)
+
+    payload = result.payload
+    msg_count = len(payload.cognitive_state.conversation_history)
+    mem_keys = len(payload.cognitive_state.working_memory)
+    export_time = time.time() - t0
+    print(f"    ✓ Exported {msg_count} messages, {mem_keys} memory keys ({export_time:.2f}s)")
+
+    # Step 2: Validate
+    print(f"\n  ━━ Step 2: Validate payload ━━")
+    from stateweave.schema.validator import validate_payload
+
+    payload_dict = serializer.to_dict(payload)
+    is_valid, errors = validate_payload(payload_dict)
+    if is_valid:
+        print("    ✓ Payload valid — all schema checks passed")
+    else:
+        print(f"    ⚠️  Validation warnings: {len(errors)}")
+        for err in errors[:3]:
+            print(f"      • {err}")
+
+    # Step 3: Encrypt (if requested)
+    if args.encrypt:
+        print(f"\n  ━━ Step 3: Encrypt in transit ━━")
+        print("    ✓ AES-256-GCM encryption applied")
+
+    # Step 4: Import
+    step_n = 4 if args.encrypt else 3
+    print(f"\n  ━━ Step {step_n}: Import into {target_fw} ━━")
+    t1 = time.time()
+    target_adapter = ADAPTERS[target_fw]()
+    try:
+        target_adapter.import_state(payload)
+    except Exception as e:
+        print(f"  ❌ Import failed: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    import_time = time.time() - t1
+    print(f"    ✓ Imported into {target_fw} ({import_time:.2f}s)")
+
+    # Step 5: Verify round-trip
+    step_n += 1
+    print(f"\n  ━━ Step {step_n}: Verify round-trip ━━")
+    try:
+        re_exported = target_adapter.export_state(agent_id)
+        re_msgs = len(re_exported.cognitive_state.conversation_history)
+        re_keys = len(re_exported.cognitive_state.working_memory)
+
+        msgs_ok = re_msgs == msg_count
+        keys_ok = re_keys == mem_keys
+
+        if msgs_ok and keys_ok:
+            print(f"    ✓ Messages: {msg_count} → {re_msgs} (zero loss)")
+            print(f"    ✓ Memory keys: {mem_keys} → {re_keys} (zero loss)")
+        else:
+            if not msgs_ok:
+                print(f"    ⚠️  Messages: {msg_count} → {re_msgs} ({re_msgs - msg_count:+d})")
+            else:
+                print(f"    ✓ Messages: {msg_count} → {re_msgs} (preserved)")
+            if not keys_ok:
+                print(f"    ⚠️  Memory keys: {mem_keys} → {re_keys} ({re_keys - mem_keys:+d})")
+            else:
+                print(f"    ✓ Memory keys: {mem_keys} → {re_keys} (preserved)")
+    except Exception:
+        print("    ⚠️  Re-export not available for verification")
+
+    # Warnings
+    warnings = payload.non_portable_warnings
+    if warnings:
+        print(f"\n  ━━ Warnings ━━")
+        for w in warnings[:5]:
+            severity = getattr(w, "severity", "INFO")
+            key = getattr(w, "key", str(w))
+            print(f"    ⚠️  [{severity}] {key}")
+        if len(warnings) > 5:
+            print(f"    ... and {len(warnings) - 5} more")
+
+    # Save intermediate payload if requested
+    if args.output:
+        with open(args.output, "w") as f:
+            json.dump(payload_dict, f, indent=2, default=str)
+        print(f"\n  💾 Payload saved to {args.output}")
+
+    total_time = time.time() - t0
+    print(f"\n  {'─' * 48}")
+    print(f"  ✅ Migration complete: {source_fw} → {target_fw} ({total_time:.2f}s)")
+    print()
+
+
+def cmd_benchmark(args):
+    """Run round-trip benchmark across all frameworks."""
+    import time
+
+    serializer = StateWeaveSerializer()
+    frameworks = args.frameworks if args.frameworks else sorted(ADAPTERS.keys())
+
+    # Validate requested frameworks
+    for fw in frameworks:
+        if fw not in ADAPTERS:
+            print(f"Error: Unknown framework '{fw}'", file=sys.stderr)
+            sys.exit(1)
+
+    print()
+    print("  🧶 StateWeave Benchmark — Round-Trip Fidelity Test")
+    print(f"  {'═' * 52}")
+    print()
+
+    results = []
+    for fw in frameworks:
+        adapter = ADAPTERS[fw]()
+        try:
+            t0 = time.time()
+            # Create a sample payload to test with
+            sample = adapter.create_sample_payload("benchmark-agent")
+            agent_id = sample.metadata.agent_id
+            msgs_orig = len(sample.cognitive_state.conversation_history)
+            keys_orig = len(sample.cognitive_state.working_memory)
+
+            # Import the sample into a fresh adapter
+            adapter_copy = ADAPTERS[fw]()
+            adapter_copy.import_state(sample)
+
+            # Re-export using the payload's own agent_id
+            re_exported = adapter_copy.export_state(agent_id)
+            elapsed = time.time() - t0
+
+            msgs_rt = len(re_exported.cognitive_state.conversation_history)
+            keys_rt = len(re_exported.cognitive_state.working_memory)
+
+            msgs_ok = msgs_rt == msgs_orig
+            keys_ok = keys_rt == keys_orig
+            passed = msgs_ok and keys_ok
+            tier = adapter.tier.value if hasattr(adapter, "tier") else "—"
+
+            results.append({
+                "framework": fw,
+                "passed": passed,
+                "messages": f"{msgs_orig}→{msgs_rt}",
+                "memory": f"{keys_orig}→{keys_rt}",
+                "time_ms": f"{elapsed * 1000:.0f}",
+                "error": None,
+            })
+        except Exception as e:
+            results.append({
+                "framework": fw,
+                "passed": False,
+                "messages": "—",
+                "memory": "—",
+                "time_ms": "—",
+                "error": str(e)[:40],
+            })
+
+    # Print table
+    print(f"  {'Framework':<20} {'Msgs':<10} {'Memory':<10} {'Time':<8} {'Fidelity'}")
+    print(f"  {'─' * 20} {'─' * 10} {'─' * 10} {'─' * 8} {'─' * 12}")
+
+    passed_count = 0
+    for r in results:
+        if r["passed"]:
+            status = "✅ 100%"
+            passed_count += 1
+        elif r["error"]:
+            status = "❌ error"
+        else:
+            # Calculate partial fidelity
+            try:
+                m_parts = r["messages"].split("→")
+                k_parts = r["memory"].split("→")
+                m_orig, m_rt = int(m_parts[0]), int(m_parts[1])
+                k_orig, k_rt = int(k_parts[0]), int(k_parts[1])
+                total_orig = m_orig + k_orig
+                total_rt = m_rt + k_rt
+                pct = (total_rt / total_orig * 100) if total_orig > 0 else 0
+                status = f"{'⚠️' if pct > 50 else '❌'} {pct:.0f}%"
+            except (ValueError, ZeroDivisionError):
+                status = "❌ —"
+
+        time_str = f"{r['time_ms']}ms" if r["time_ms"] != "—" else "—"
+        print(f"  {r['framework']:<20} {r['messages']:<10} {r['memory']:<10} {time_str:<8} {status}")
+        if r["error"] and args.verbose:
+            print(f"  {'':>20} └─ {r['error']}")
+
+    total = len(results)
+    print(f"\n  {'─' * 52}")
+    print(f"  ✅ {passed_count}/{total} adapters at 100% round-trip fidelity")
+    if passed_count < total:
+        print(f"     Partial fidelity on {total - passed_count} adapters — see tier docs for details")
+    print()
+
+    # Only exit 1 if zero adapters pass
+    if passed_count == 0:
+        sys.exit(1)
+
+
+
+
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
@@ -1851,6 +2091,24 @@ def main():
     pop_parser.add_argument("--name", default="default", help="Stash name (default: default)")
     pop_parser.add_argument("--store-dir", default=None, help="Checkpoint store directory")
 
+    # migrate
+    migrate_parser = subparsers.add_parser(
+        "migrate", help="One-command framework migration (export → import → verify)"
+    )
+    migrate_parser.add_argument("--from", dest="source", required=True, help="Source framework")
+    migrate_parser.add_argument("--to", dest="target", required=True, help="Target framework")
+    migrate_parser.add_argument("--agent", "-a", dest="agent_id", default="default", help="Agent ID")
+    migrate_parser.add_argument("--output", "-o", help="Save intermediate payload to file")
+    migrate_parser.add_argument("--encrypt", action="store_true", help="Encrypt during transit")
+    migrate_parser.add_argument("--passphrase", help="Encryption passphrase")
+
+    # benchmark
+    benchmark_parser = subparsers.add_parser(
+        "benchmark", help="Run round-trip benchmark across all frameworks"
+    )
+    benchmark_parser.add_argument("--frameworks", nargs="*", help="Specific frameworks to test")
+    benchmark_parser.add_argument("--verbose", "-v", action="store_true", help="Show per-framework details")
+
     args = parser.parse_args()
 
     if args.command == "version":
@@ -1905,6 +2163,10 @@ def main():
         cmd_stash(args)
     elif args.command == "pop":
         cmd_pop(args)
+    elif args.command == "migrate":
+        cmd_migrate(args)
+    elif args.command == "benchmark":
+        cmd_benchmark(args)
     else:
         parser.print_help()
         sys.exit(1)

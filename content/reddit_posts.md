@@ -136,7 +136,7 @@ Things the Python crowd might care about:
 - Pydantic models throughout — strict validation, typed everything
 - No pickle or eval anywhere (compliance engine enforces this)
 - pyproject.toml-native, ruff-formatted
-- CLI with 14 commands (export, import, diff, checkpoint, rollback, etc.)
+- CLI with 25+ commands (export, import, diff, checkpoint, rollback, log, blame, replay, etc.)
 - 730+ tests, including integration tests against real LangGraph
 - AES-256-GCM encryption + Ed25519 signing
 - State versioning: checkpoint, rollback, diff, branch

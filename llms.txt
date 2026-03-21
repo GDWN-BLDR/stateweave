@@ -66,6 +66,8 @@ StateWeave ships as an MCP server. Add to your MCP config:
 
 ## Key Features
 - One-line auto-instrumentation (`stateweave.auto()` — like Sentry for agents)
+- One-command migration (`stateweave migrate --from langgraph --to crewai --agent my-agent`)
+- Round-trip fidelity benchmark (`stateweave benchmark` — tests all 10 frameworks)
 - Agent time travel (checkpoint, rollback, branch, diff)
 - git-style CLI: `log`, `blame`, `stash`, `pop`, `replay`, `status`, `compare`
 - Live agent dashboard (`stateweave watch`)
@@ -78,7 +80,7 @@ StateWeave ships as an MCP server. Add to your MCP config:
 - A2A protocol bridge
 - 12 UCE compliance scanners (serialization safety, import discipline, etc.)
 - GitHub Action template for CI integration
-- 520+ tests
+- 730+ tests
 
 ## Links
 - Source: https://github.com/GDWN-BLDR/stateweave

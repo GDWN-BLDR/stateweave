@@ -5,6 +5,59 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.12] — 2026-03-21
+
+### Added
+
+- **`stateweave migrate`** — One-command framework migration: `stateweave migrate --from langgraph --to crewai --agent my-agent`. Full pipeline: export → validate → import → verify, with beautiful step-by-step terminal output
+- **`stateweave benchmark`** — Round-trip fidelity test across all 10 frameworks. Shows message/memory preservation and fidelity percentage per adapter
+
+### Changed
+
+- **README** — Expanded CLI reference from 18 to 28 commands. Added one-command migration example to hero section
+- **llms.txt** — Added migrate and benchmark to feature list, fixed test count (520+ → 730+)
+- **Content** — Fixed stale CLI counts (14 → 25+) in HN post, Reddit posts
+
+---
+
+## [0.3.11] — 2026-03-20
+
+### Fixed
+
+- **Audit cleanup** — Removed `content/` and `.agents/` from sensitive directories list (intentionally public)
+- **Test count detection** — Audit script now uses `pytest --co -q` for accurate parametrized test count (737 vs 607 function defs)
+
+---
+
+## [0.3.10] — 2026-03-20
+
+### Fixed
+
+- **CLI infinite read** — `cmd_validate` now blocks device files and caps at 50MB to prevent hangs on `/dev/urandom`
+- **REST API crash on malformed JSON** — `_read_body()` catches `JSONDecodeError`, returns HTTP 400 instead of dropping the connection
+- **CheckpointStore race condition** — Atomic writes via `tempfile.mkstemp()` → `os.replace()` + `fcntl` file locking prevent manifest corruption under concurrent writes
+- **CLI exit code swallowing** — Test helper now propagates `SystemExit` codes correctly
+
+### Added
+
+- **220 adversarial tests** — Schema fuzzing, encryption attacks, CLI injection, REST API attacks, chaos/fault injection
+- **Red team audit v3** — Supply chain audit, differential regression detector, accessibility audit scripts
+
+---
+
+## [0.3.9] — 2026-03-20
+
+### Added
+
+- **`stateweave log`** — Checkpoint history with confidence sparkline
+- **`stateweave blame`** — Trace which checkpoint changed a specific key
+- **`stateweave stash`** — Save current state (like `git stash`)
+- **`stateweave pop`** — Restore stashed state
+- **GitHub Action** — `action.yml` for CI validation
+- **README overhaul** — Complete rewrite with git-style CLI section
+
+---
+
 ## [0.3.3] — 2026-03-17
 
 ### Fixed

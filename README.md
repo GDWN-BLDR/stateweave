@@ -90,6 +90,31 @@ $ python examples/full_demo.py
 >
 > Or run the full 7-step demo: `python examples/full_demo.py`
 
+### One-Command Migration
+
+```bash
+$ stateweave migrate --from langgraph --to crewai --agent my-agent
+
+  🧶 StateWeave Migrate: langgraph → crewai
+  ════════════════════════════════════════════════
+
+  ━━ Step 1: Export from langgraph ━━
+    ✓ Exported 12 messages, 5 memory keys (0.01s)
+
+  ━━ Step 2: Validate payload ━━
+    ✓ Payload valid — all schema checks passed
+
+  ━━ Step 3: Import into crewai ━━
+    ✓ Imported into crewai (0.00s)
+
+  ━━ Step 4: Verify round-trip ━━
+    ✓ Messages: 12 → 12 (zero loss)
+    ✓ Memory keys: 5 → 5 (zero loss)
+
+  ────────────────────────────────────────────────
+  ✅ Migration complete: langgraph → crewai (0.01s)
+```
+
 ### One-Line Auto-Instrumentation
 
 ```python
@@ -317,7 +342,7 @@ Every agent's state is represented as a `StateWeavePayload`:
 
 ```python
 StateWeavePayload(
-    stateweave_version="0.3.8",
+    stateweave_version="0.3.11",
     source_framework="langgraph",
     exported_at=datetime,
     cognitive_state=CognitiveState(
@@ -510,9 +535,20 @@ The UCE `adapter_contract` scanner automatically validates that all adapters cor
 stateweave quickstart              # zero-code demo: checkpoint, diff, rollback
 stateweave init                    # set up project config (.stateweave/config.toml)
 
+# ── One-command migration ──
+stateweave migrate --from langgraph --to crewai --agent my-agent
+stateweave benchmark               # round-trip fidelity test across all 10 frameworks
+
 # ── Debug agent failures ──
 stateweave why my-agent            # autopsy: what changed and where it went wrong
 stateweave doctor                  # diagnostic health checks
+stateweave replay my-agent         # step-by-step state debugger
+
+# ── git-style state management ──
+stateweave log my-agent            # checkpoint history with confidence sparkline
+stateweave blame my-agent confidence  # trace which checkpoint changed a key
+stateweave stash my-agent          # save current state (like git stash)
+stateweave pop my-agent            # restore stashed state
 
 # ── Version control for agent state ──
 stateweave checkpoint state.json --label "before-experiment"
@@ -520,10 +556,15 @@ stateweave history my-agent
 stateweave rollback my-agent 3 -o restored.json
 stateweave diff before.json after.json
 
-# ── Export / Import / Migrate ──
+# ── Export / Import ──
 stateweave export -f langgraph -a my-agent -o state.json
 stateweave import -f crewai --payload state.json
 stateweave detect state.json       # auto-detect source framework
+
+# ── Monitoring ──
+stateweave watch                   # live agent health dashboard (htop for brains)
+stateweave status my-agent         # agent state summary
+stateweave ci my-agent             # CI regression detection (exits non-zero on failure)
 
 # ── Utilities ──
 stateweave version                 # version, adapters, encryption status

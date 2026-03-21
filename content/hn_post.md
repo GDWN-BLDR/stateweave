@@ -40,7 +40,7 @@ Some details that might interest this crowd:
 - A2A protocol bridge for inter-agent state transfer
 
 Also ships as an MCP Server, so any MCP-compatible assistant can use
-export/import/diff as tools directly. CLI with 14 commands.
+export/import/diff as tools directly. CLI with 25+ commands.
 
 730+ tests, Apache 2.0. This is genuinely a learning project that
 grew into something I think might be useful — would really appreciate
