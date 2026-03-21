@@ -76,6 +76,12 @@ StateWeave ships as an MCP server. Add to your MCP config:
 - Shell completions (`stateweave completions bash/zsh/fish`)
 - Shareable markdown reports (`stateweave report` — paste into PRs/Slack)
 - Git pre-commit hook (`stateweave hook install` — CI on every commit)
+- Checkpoint pruning (`stateweave clean --keep 5` — disk management)
+- CLI config management (`stateweave config get/set/list` — no TOML editing)
+- Self-update check (`stateweave upgrade` — checks PyPI for new versions)
+- Environment snapshot (`stateweave env` — Python, frameworks, store, config)
+- Checkpoint search (`stateweave search "query"` — find state across history)
+- Visual checkpoint comparison (`stateweave compare agent v1 v2`)
 - Live agent dashboard (`stateweave watch`)
 - CI regression detection (`stateweave ci` — exits non-zero on behavior regression)
 - AES-256-GCM encryption with Ed25519 payload signing

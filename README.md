@@ -579,6 +579,15 @@ stateweave schema -o schema.json   # dump Universal Schema as JSON Schema
 stateweave validate state.json     # validate a payload file
 stateweave generate-adapter my-framework  # scaffold new adapter
 stateweave completions bash        # generate shell completions (bash/zsh/fish)
+
+# ── Maintenance ──
+stateweave clean --keep 5          # prune old checkpoints (keep latest 5)
+stateweave config list             # view config without editing TOML
+stateweave config set --key framework --value langgraph
+stateweave upgrade                 # check for new versions on PyPI
+stateweave env                     # full environment snapshot (Python, frameworks, store)
+stateweave search "confidence"     # search checkpoint history for key/value
+stateweave compare my-agent 1 3    # visual diff between two checkpoint versions
 ```
 
 ## Compliance (UCE)

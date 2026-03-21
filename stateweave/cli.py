@@ -1568,7 +1568,262 @@ def cmd_ci(args):
         print("═" * 60)
         sys_mod.exit(0)
 
+def cmd_clean(args):
+    """Prune old checkpoints to free disk space."""
+    import os
+    import shutil
+
+    from stateweave.core.timetravel import CheckpointStore
+
+    store_dir = args.store_dir if hasattr(args, "store_dir") and args.store_dir else None
+    store = CheckpointStore(store_dir=store_dir) if store_dir else CheckpointStore()
+
+    agents = store.list_agents()
+    keep = args.keep if hasattr(args, "keep") else 5
+
+    print()
+    print("  🧶 StateWeave Clean — Pruning Old Checkpoints")
+    print(f"  {'═' * 44}")
+    print(f"  Keeping latest {keep} checkpoints per agent")
+    print()
+
+    total_removed = 0
+    total_freed = 0
+
+    for agent_id in sorted(agents):
+        try:
+            history = store.get_history(agent_id)
+            if len(history) <= keep:
+                print(f"  {agent_id}: {len(history)} checkpoints (nothing to prune)")
+                continue
+
+            to_remove = history[:-keep]
+            removed_count = 0
+            freed = 0
+            for cp in to_remove:
+                if hasattr(cp, "path") and os.path.isfile(str(cp.path)):
+                    freed += os.path.getsize(str(cp.path))
+                    os.remove(str(cp.path))
+                    removed_count += 1
+                elif hasattr(cp, "hash"):
+                    removed_count += 1
+
+            total_removed += removed_count
+            total_freed += freed
+            print(f"  {agent_id}: removed {removed_count} old checkpoints")
+        except Exception as e:
+            print(f"  {agent_id}: skipped ({e})")
+
+    print(f"\n  {'─' * 44}")
+    if total_removed > 0:
+        size_str = f"{total_freed / 1024:.1f} KB" if total_freed > 1024 else f"{total_freed} bytes"
+        print(f"  ✅ Removed {total_removed} checkpoints ({size_str} freed)")
+    else:
+        print("  ✅ Nothing to clean — all stores are within limits")
+    print()
+
+
+def cmd_config(args):
+    """View or edit StateWeave config."""
+    import os
+
+    from pathlib import Path
+
+    action = args.action
+    config_path = Path(".stateweave/config.toml")
+
+    if action == "list":
+        if config_path.is_file():
+            print(f"  Config: {config_path.resolve()}\n")
+            with open(config_path) as f:
+                print(f.read())
+        else:
+            print("  No config found. Run: stateweave init")
+    elif action == "path":
+        if config_path.is_file():
+            print(str(config_path.resolve()))
+        else:
+            print("  No config found. Run: stateweave init")
+    elif action == "get":
+        if not hasattr(args, "key") or not args.key:
+            print("Error: --key required for get", file=sys.stderr)
+            sys.exit(1)
+        if config_path.is_file():
+            with open(config_path) as f:
+                content = f.read()
+            for line in content.split("\n"):
+                if line.strip().startswith(args.key):
+                    print(line.strip())
+                    return
+            print(f"Key '{args.key}' not found in config")
+        else:
+            print("  No config found. Run: stateweave init")
+    elif action == "set":
+        if not hasattr(args, "key") or not args.key or not hasattr(args, "value") or not args.value:
+            print("Error: --key and --value required for set", file=sys.stderr)
+            sys.exit(1)
+        if not config_path.is_file():
+            print("  No config found. Run: stateweave init")
+            sys.exit(1)
+        with open(config_path) as f:
+            lines = f.readlines()
+        found = False
+        for i, line in enumerate(lines):
+            if line.strip().startswith(args.key):
+                lines[i] = f'{args.key} = "{args.value}"\n'
+                found = True
+                break
+        if not found:
+            lines.append(f'{args.key} = "{args.value}"\n')
+        with open(config_path, "w") as f:
+            f.writelines(lines)
+        print(f"  ✅ Set {args.key} = {args.value}")
+
+
+def cmd_upgrade(args):
+    """Check if a newer version of StateWeave is available."""
+    import stateweave as sw
+
+    current = sw.__version__
+    print(f"  Current version: {current}")
+
+    try:
+        import urllib.request
+        url = "https://pypi.org/pypi/stateweave/json"
+        with urllib.request.urlopen(url, timeout=5) as resp:
+            data = json.loads(resp.read().decode())
+        latest = data["info"]["version"]
+
+        if latest == current:
+            print(f"  ✅ You're on the latest version ({current})")
+        else:
+            print(f"  ⬆️  New version available: {latest}")
+            print(f"     Run: pip install --upgrade stateweave")
+    except Exception:
+        print("  ⚠️  Unable to check PyPI (offline?)")
+
+
+def cmd_search(args):
+    """Search checkpoint history for a key or value."""
+    from stateweave.core.timetravel import CheckpointStore
+
+    store_dir = args.store_dir if hasattr(args, "store_dir") and args.store_dir else None
+    store = CheckpointStore(store_dir=store_dir) if store_dir else CheckpointStore()
+
+    query = args.query
+    agent_id = args.agent_id if hasattr(args, "agent_id") and args.agent_id else None
+
+    agents = [agent_id] if agent_id else store.list_agents()
+
+    print(f"\n  🔍 Searching for: {query}\n")
+    matches = 0
+
+    for aid in sorted(agents):
+        try:
+            history = store.get_history(aid)
+            for cp in history:
+                if hasattr(cp, "payload"):
+                    payload_str = json.dumps(cp.payload, default=str)
+                    if query.lower() in payload_str.lower():
+                        label = cp.label if hasattr(cp, "label") else f"v{cp.version}"
+                        print(f"  ✅ {aid} @ {label}")
+                        matches += 1
+        except Exception:
+            pass
+
+    print(f"\n  Found {matches} match(es)\n")
+
+
+def cmd_env(args):
+    """Show environment snapshot for debugging."""
+    import os
+    import platform
+    import stateweave as sw
+
+    print()
+    print("  🧶 StateWeave Environment")
+    print(f"  {'═' * 44}")
+    print()
+    print(f"  StateWeave:  {sw.__version__}")
+    print(f"  Python:      {platform.python_version()}")
+    print(f"  Platform:    {platform.platform()}")
+    print(f"  Machine:     {platform.machine()}")
+    print()
+
+    # Frameworks
+    print("  ━━ Frameworks ━━")
+    for name in sorted(ADAPTERS.keys()):
+        try:
+            adapter = ADAPTERS[name]()
+            tier = getattr(adapter, "tier", None)
+            tier_str = f" ({tier.value})" if tier else ""
+            print(f"    {name:<20s}{tier_str}")
+        except Exception:
+            print(f"    {name:<20s} (error)")
+    print()
+
+    # Config
+    config_path = os.path.join(".stateweave", "config.toml")
+    if os.path.isfile(config_path):
+        print(f"  Config: {os.path.abspath(config_path)}")
+    else:
+        print("  Config: not initialized (run: stateweave init)")
+
+    # Store
+    store_path = os.path.expanduser("~/.stateweave/checkpoints")
+    if os.path.isdir(store_path):
+        total_size = sum(
+            os.path.getsize(os.path.join(dp, f))
+            for dp, _, fns in os.walk(store_path)
+            for f in fns
+        )
+        if total_size > 1024 * 1024:
+            size_str = f"{total_size / 1024 / 1024:.1f} MB"
+        elif total_size > 1024:
+            size_str = f"{total_size / 1024:.1f} KB"
+        else:
+            size_str = f"{total_size} bytes"
+        print(f"  Store:  {store_path} ({size_str})")
+    else:
+        print(f"  Store:  {store_path} (empty)")
+    print()
+
+
+def cmd_compare(args):
+    """Visual side-by-side comparison of two checkpoint versions."""
+    from stateweave.core.timetravel import CheckpointStore
+
+    store_dir = args.store_dir if hasattr(args, "store_dir") and args.store_dir else None
+    store = CheckpointStore(store_dir=store_dir) if store_dir else CheckpointStore()
+
+    agent_id = args.agent_id
+    v1 = args.version_a
+    v2 = args.version_b
+
+    print(f"\n  🧶 StateWeave Compare: {agent_id} v{v1} vs v{v2}")
+    print(f"  {'═' * 48}\n")
+
+    try:
+        diff = store.diff_versions(agent_id, v1, v2)
+        if not diff.entries:
+            print("  ✅ No differences — states are identical")
+        else:
+            print(f"  Changes: {len(diff.entries)} ({'+' if diff.added_count else ''}{diff.added_count} added, ~{diff.modified_count} modified, -{diff.removed_count} removed)\n")
+            # Show in a table
+            print(f"  {'Path':<35s} {'Change':<10s} {'Details'}")
+            print(f"  {'─' * 35} {'─' * 10} {'─' * 30}")
+            for entry in diff.entries[:20]:
+                print(f"  {str(entry)[:75]}")
+            if len(diff.entries) > 20:
+                print(f"  ... and {len(diff.entries) - 20} more changes")
+    except Exception as e:
+        print(f"  Error: {e}", file=sys.stderr)
+        sys.exit(1)
+    print()
+
+
 def cmd_report(args):
+
     """Generate a shareable markdown report of agent state."""
     from datetime import datetime
 
@@ -2476,6 +2731,36 @@ def main():
     hook_parser = subparsers.add_parser("hook", help="Install/remove git pre-commit hook for stateweave ci")
     hook_parser.add_argument("action", choices=["install", "uninstall", "status"], help="Action to perform")
 
+    # clean
+    clean_parser = subparsers.add_parser("clean", help="Prune old checkpoints to free disk space")
+    clean_parser.add_argument("--keep", type=int, default=5, help="Number of latest checkpoints to keep (default: 5)")
+    clean_parser.add_argument("--store-dir", default=None, help="Checkpoint store directory")
+
+    # config
+    config_parser = subparsers.add_parser("config", help="View or edit StateWeave config")
+    config_parser.add_argument("action", choices=["list", "path", "get", "set"], help="Action")
+    config_parser.add_argument("--key", help="Config key (for get/set)")
+    config_parser.add_argument("--value", help="Config value (for set)")
+
+    # upgrade
+    subparsers.add_parser("upgrade", help="Check if a newer version is available")
+
+    # search
+    search_parser = subparsers.add_parser("search", help="Search checkpoint history for a key or value")
+    search_parser.add_argument("query", help="Search query")
+    search_parser.add_argument("agent_id", nargs="?", default=None, help="Agent ID (all agents if omitted)")
+    search_parser.add_argument("--store-dir", default=None, help="Checkpoint store directory")
+
+    # env
+    subparsers.add_parser("env", help="Show environment snapshot for debugging")
+
+    # compare
+    compare_parser = subparsers.add_parser("compare", help="Visual side-by-side checkpoint comparison")
+    compare_parser.add_argument("agent_id", help="Agent ID")
+    compare_parser.add_argument("version_a", type=int, help="First version")
+    compare_parser.add_argument("version_b", type=int, help="Second version")
+    compare_parser.add_argument("--store-dir", default=None, help="Checkpoint store directory")
+
     args = parser.parse_args()
 
     if args.command == "version":
@@ -2552,6 +2837,18 @@ def main():
         cmd_report(args)
     elif args.command == "hook":
         cmd_hook(args)
+    elif args.command == "clean":
+        cmd_clean(args)
+    elif args.command == "config":
+        cmd_config(args)
+    elif args.command == "upgrade":
+        cmd_upgrade(args)
+    elif args.command == "search":
+        cmd_search(args)
+    elif args.command == "env":
+        cmd_env(args)
+    elif args.command == "compare":
+        cmd_compare(args)
     else:
         parser.print_help()
         sys.exit(1)

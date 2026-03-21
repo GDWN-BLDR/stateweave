@@ -3,7 +3,25 @@
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).## [0.3.14] — 2026-03-21
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).## [0.3.15] — 2026-03-21
+
+### Added
+
+- **`stateweave clean`** — Prune old checkpoints to free disk space (`--keep N`)
+- **`stateweave config list/path/get/set`** — Manage config from CLI
+- **`stateweave upgrade`** — Check PyPI for newer versions
+- **`stateweave search`** — Search checkpoint history for key/value patterns
+- **`stateweave env`** — Full environment snapshot (Python, frameworks, store, config)
+- **`stateweave compare`** — Visual diff between two checkpoint versions
+
+### Changed
+
+- **README** — CLI reference expanded to 43 commands with new Maintenance section
+- **llms.txt** — Added 6 new feature entries
+
+---
+
+## [0.3.14] — 2026-03-21
 
 ### Added
 
