@@ -163,10 +163,35 @@ def cmd_diff(args):
 
 def cmd_validate(args):
     """Validate a StateWeavePayload JSON file."""
+    import os
+
     serializer = StateWeaveSerializer()
 
+    # Safety: check file exists and is a regular file (not device, pipe, etc.)
+    real_path = os.path.realpath(args.payload)
+    if not os.path.isfile(real_path):
+        print(f"Error: Not a regular file: {args.payload}", file=sys.stderr)
+        sys.exit(1)
+
+    # Safety: cap file size at 50MB to prevent memory exhaustion
+    MAX_SIZE = 50 * 1024 * 1024  # 50MB
     try:
-        with open(args.payload, "r") as f:
+        file_size = os.path.getsize(real_path)
+        if file_size > MAX_SIZE:
+            print(
+                f"Error: File too large ({file_size / 1024 / 1024:.1f}MB > {MAX_SIZE / 1024 / 1024:.0f}MB limit)",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        if file_size == 0:
+            print("Error: File is empty", file=sys.stderr)
+            sys.exit(1)
+    except OSError as e:
+        print(f"Error: Cannot read file: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        with open(real_path, "r") as f:
             payload_dict = json.load(f)
     except FileNotFoundError:
         print(f"Error: File not found: {args.payload}", file=sys.stderr)

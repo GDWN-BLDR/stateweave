@@ -43,7 +43,12 @@ env/
 *.key
 *.pem
 
-# Internal docs (never commit to public repo)
+# ============================================================
+# PRIVATE — NEVER commit to the public GitHub repo.
+# This includes governance, red-team audits, internal research,
+# agent context, and any competitive/strategic documents.
+# See board/MANIFEST.md "Publication Firewall" rule.
+# ============================================================
 board/
 breakdown/
 research/
@@ -51,6 +56,10 @@ content/
 .agent/
 .agents/
 .stateweave/
+scripts/redteam*
+scripts/accessibility_audit.py
+scripts/supply_chain_audit.py
+tests/redteam/
 
 # Private assets (not for public repo)
 website/

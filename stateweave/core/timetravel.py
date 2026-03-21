@@ -10,8 +10,11 @@ Reuses existing engines:
 - stateweave.core.diff (structural diff between payloads)
 """
 
+import fcntl
 import json
 import logging
+import os
+import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -299,13 +302,11 @@ class CheckpointStore:
     def _store_full(self, agent_dir: Path, version: int, payload: StateWeavePayload) -> None:
         filepath = agent_dir / f"v{version:04d}.json"
         data = self._serializer.to_dict(payload)
-        with open(filepath, "w") as f:
-            json.dump(data, f, indent=2, default=str)
+        self._atomic_write_json(filepath, data)
 
     def _store_delta(self, agent_dir: Path, version: int, delta: Any) -> None:
         filepath = agent_dir / f"v{version:04d}.delta.json"
-        with open(filepath, "w") as f:
-            json.dump(delta.model_dump(mode="json"), f, indent=2, default=str)
+        self._atomic_write_json(filepath, delta.model_dump(mode="json"))
 
     def _load_payload(self, agent_id: str, version: int) -> Optional[StateWeavePayload]:
         agent_dir = self._root / agent_id
@@ -326,8 +327,13 @@ class CheckpointStore:
         if not manifest.exists():
             return CheckpointHistory(agent_id=agent_id)
 
+        # Use shared lock for reads
         with open(manifest, "r") as f:
-            data = json.load(f)
+            fcntl.flock(f, fcntl.LOCK_SH)
+            try:
+                data = json.load(f)
+            finally:
+                fcntl.flock(f, fcntl.LOCK_UN)
 
         history = CheckpointHistory(
             agent_id=agent_id,
@@ -349,8 +355,32 @@ class CheckpointStore:
             "branches": history.branches,
         }
 
-        with open(manifest, "w") as f:
-            json.dump(data, f, indent=2)
+        self._atomic_write_json(manifest, data)
+
+    @staticmethod
+    def _atomic_write_json(filepath: Path, data: Any) -> None:
+        """Write JSON atomically: write to temp file, then rename.
+
+        This prevents corrupt partial writes under concurrent access.
+        """
+        dir_path = filepath.parent
+        fd, tmp_path = tempfile.mkstemp(dir=str(dir_path), suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w") as f:
+                # Exclusive lock during write
+                fcntl.flock(f, fcntl.LOCK_EX)
+                json.dump(data, f, indent=2, default=str)
+                f.flush()
+                os.fsync(f.fileno())
+                fcntl.flock(f, fcntl.LOCK_UN)
+            os.replace(tmp_path, str(filepath))
+        except BaseException:
+            # Clean up temp file on any error
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
 
     def format_history(self, agent_id: str) -> str:
         """Format checkpoint history as a human-readable report."""

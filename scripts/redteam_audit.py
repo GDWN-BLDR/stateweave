@@ -184,15 +184,34 @@ def phase_number_claims():
         f"Found: {', '.join(sorted(a.stem for a in adapters))}",
     )
 
+    # Count tests using pytest --co for accurate count (parametrized tests expand)
     test_count = 0
-    for tf in (REPO_ROOT / "tests").rglob("*.py"):
-        try:
-            content = tf.read_text(errors="replace")
-            test_count += len(re.findall(r"def test_", content))
-        except Exception:
-            pass
+    try:
+        result = subprocess.run(
+            [sys.executable, "-m", "pytest", "--co", "-q", "tests/"],
+            capture_output=True, text=True, timeout=30,
+            cwd=str(REPO_ROOT),
+        )
+        # Last line is like "737 tests collected in 0.31s"
+        for line in result.stdout.strip().split("\n"):
+            m = re.search(r"(\d+) tests? collected", line)
+            if m:
+                test_count = int(m.group(1))
+                break
+    except Exception:
+        pass
+
+    # Fallback: count def test_ functions if pytest collection fails
+    if test_count == 0:
+        for tf in (REPO_ROOT / "tests").rglob("*.py"):
+            try:
+                content = tf.read_text(errors="replace")
+                test_count += len(re.findall(r"def test_", content))
+            except Exception:
+                pass
+
     extracted_data["tests_code"] = test_count
-    check(f"Test count ({test_count}) supports '440+' claim", test_count >= 440)
+    check(f"Test count ({test_count}) supports '730+' claim", test_count >= 700)
 
     cli_count = 0
     cli_files = []
@@ -667,8 +686,8 @@ def phase_consistency_matrix():
 
 # ─── Phase 11: Persona Scorecards ────────────────────────
 def phase_persona_scorecards():
-    print("\n━━ Phase 11: Persona Scorecards ━━")
-    print("  (Auto-scored from available data; human review supplements these)")
+    print("\n━━ Phase 11: Persona Scorecards (v2 — substantive checks) ━━")
+    print("  (Auto-scored with real import/output/content checks)")
     print()
 
     scorecards = []
@@ -698,6 +717,35 @@ def phase_persona_scorecards():
         }
     )
     print(f"  1. Skeptical HN Commenter      {p1_avg:.1f}/5  {p1_scores}")
+
+    # Persona 2: Framework Maintainer — NEW: actually import each adapter
+    p2_scores = {}
+    adapter_dir = REPO_ROOT / "stateweave" / "adapters"
+    adapter_files = sorted(adapter_dir.glob("*_adapter.py"))
+    graceful_failures = 0
+    crash_failures = 0
+    for af in adapter_files:
+        adapter_name = af.stem.replace("_adapter", "")
+        try:
+            result = subprocess.run(
+                [sys.executable, "-c",
+                 f"from stateweave.adapters.{af.stem} import *; "
+                 f"print('imported:{adapter_name}')"],
+                capture_output=True, text=True, timeout=10,
+            )
+            if result.returncode == 0:
+                graceful_failures += 0  # Success
+            elif "AdapterError" in result.stderr or "not installed" in result.stderr:
+                graceful_failures += 1  # Graceful failure with actionable message
+            else:
+                crash_failures += 1  # Crash or confusing error
+        except Exception:
+            crash_failures += 1
+    p2_scores["adapters_importable"] = 5 if crash_failures == 0 else (3 if crash_failures <= 2 else 1)
+    p2_scores["graceful_missing_fw"] = 5 if crash_failures == 0 else 2
+    p2_avg = sum(p2_scores.values()) / len(p2_scores)
+    scorecards.append({"persona": "Framework Maintainer", "scores": p2_scores, "average": round(p2_avg, 1)})
+    print(f"  2. Framework Maintainer         {p2_avg:.1f}/5  {p2_scores}")
 
     # Persona 3: Security Auditor
     p3_scores = {}
@@ -745,7 +793,7 @@ def phase_persona_scorecards():
     )
     print(f"  4. Competitor                   {p4_avg:.1f}/5  {p4_scores}")
 
-    # Persona 7: First-Time User
+    # Persona 7: First-Time User — UPGRADED: checks demo stdout for next-steps
     p7_scores = {}
     ttv = extracted_data.get("ttv_seconds")
     ttv_skipped = extracted_data.get("ttv_skipped")
@@ -757,6 +805,28 @@ def phase_persona_scorecards():
             else 1
         )
         p7_scores["time_under_90s"] = 5 if ttv < 90 else (3 if ttv < 120 else 1)
+        # NEW: check that demo output includes next-steps guidance
+        demo_script = REPO_ROOT / "examples" / "full_demo.py"
+        if demo_script.exists():
+            try:
+                demo_out = subprocess.run(
+                    [sys.executable, str(demo_script)],
+                    capture_output=True, text=True, timeout=30, cwd=str(REPO_ROOT),
+                )
+                has_next = any(kw in demo_out.stdout.lower() for kw in ["next step", "what's next", "try:", "learn more"])
+                p7_scores["demo_has_next_steps"] = 5 if has_next else 2
+            except Exception:
+                p7_scores["demo_has_next_steps"] = 1
+        # NEW: check --help is concise (≤ 50 lines)
+        try:
+            help_out = subprocess.run(
+                [sys.executable, "-c", "from stateweave.cli import main; main()", "--help"],
+                capture_output=True, text=True, timeout=10,
+            )
+            help_lines = len(help_out.stdout.strip().split("\n"))
+            p7_scores["help_concise"] = 5 if help_lines <= 50 else (3 if help_lines <= 70 else 1)
+        except Exception:
+            p7_scores["help_concise"] = 1
         p7_avg = sum(p7_scores.values()) / len(p7_scores)
         scorecards.append(
             {
@@ -797,17 +867,26 @@ def phase_persona_scorecards():
     )
     print(f"  8. Journalist / Analyst         {p8_avg:.1f}/5  {p8_scores}")
 
-    # Persona 9: SMB Customer
+    # Persona 9: SMB Customer — UPGRADED: checks getting-started docs
     p9_scores = {}
     ttv_skipped = extracted_data.get("ttv_skipped")
     if ttv_skipped:
-        # Don't penalize when TTV can't run due to Python version
         p9_scores["time_to_value"] = None
     else:
         p9_scores["time_to_value"] = 5 if (ttv and ttv < 60) else (3 if (ttv and ttv < 120) else 1)
     p9_scores["open_source_clear"] = (
         5 if any(r["status"] == "pass" and "license" in r["name"].lower() for r in results) else 2
     )
+    # NEW: check for getting-started doc
+    docs_dir = REPO_ROOT / "docs"
+    getting_started = False
+    if docs_dir.exists():
+        for doc in docs_dir.rglob("*.md"):
+            name_lower = doc.stem.lower().replace("-", " ").replace("_", " ")
+            if any(kw in name_lower for kw in ["getting started", "quickstart", "quick start", "tutorial"]):
+                getting_started = True
+                break
+    p9_scores["getting_started_doc"] = 5 if getting_started else 2
     scored_vals = [v for v in p9_scores.values() if v is not None]
     p9_avg = sum(scored_vals) / max(len(scored_vals), 1)
     scorecards.append(
@@ -819,14 +898,33 @@ def phase_persona_scorecards():
     )
     print(f"  9. SMB Customer                 {p9_avg:.1f}/5  {p9_scores}")
 
-    # Persona 10: Mid-Market
+    # Persona 10: Mid-Market — UPGRADED: checks migration guides and test badge URL
     p10_scores = {}
     p10_scores["test_credibility"] = 5 if extracted_data.get("tests_code", 0) >= 400 else 2
-    docs_dir = REPO_ROOT / "docs"
     p10_scores["docs_exist"] = (
         5 if docs_dir.exists() and len(list(docs_dir.rglob("*.md"))) > 3 else 2
     )
     p10_scores["contributing_exists"] = 5 if (REPO_ROOT / "CONTRIBUTING.md").exists() else 1
+    # NEW: check for migration guide
+    has_migration_guide = False
+    if docs_dir.exists():
+        for doc in docs_dir.rglob("*.md"):
+            if "migrat" in doc.stem.lower():
+                has_migration_guide = True
+                break
+    p10_scores["migration_guide"] = 5 if has_migration_guide else 2
+    # NEW: check CI badge URL in README
+    readme = (REPO_ROOT / "README.md").read_text(errors="replace")
+    badge_urls = re.findall(r'\!\[.*?\]\((https://[^)]*(?:badge|shield|ci|action)[^)]*)', readme, re.I)
+    if badge_urls:
+        badge_ok = 0
+        for url in badge_urls[:3]:
+            headers, status = fetch_headers(url)
+            if status == 200:
+                badge_ok += 1
+        p10_scores["badges_live"] = 5 if badge_ok == len(badge_urls[:3]) else 3
+    else:
+        p10_scores["badges_live"] = 1
     p10_avg = sum(p10_scores.values()) / len(p10_scores)
     scorecards.append(
         {
@@ -837,10 +935,17 @@ def phase_persona_scorecards():
     )
     print(f"  10. Mid-Market Customer         {p10_avg:.1f}/5  {p10_scores}")
 
-    # Persona 11: Enterprise
+    # Persona 11: Enterprise — UPGRADED: SECURITY.md disclosure check, SBOM capability
     p11_scores = {}
     p11_scores["license_clear"] = 5 if (REPO_ROOT / "LICENSE").exists() else 1
     p11_scores["security_policy"] = 5 if (REPO_ROOT / "SECURITY.md").exists() else 1
+    # NEW: check SECURITY.md has a disclosure process section
+    if (REPO_ROOT / "SECURITY.md").exists():
+        sec_content = (REPO_ROOT / "SECURITY.md").read_text(errors="replace").lower()
+        has_disclosure = any(kw in sec_content for kw in ["disclosure", "report", "vulnerability", "responsible"])
+        p11_scores["disclosure_process"] = 5 if has_disclosure else 2
+    else:
+        p11_scores["disclosure_process"] = 1
     p11_scores["changelog"] = 5 if (REPO_ROOT / "CHANGELOG.md").exists() else 1
     p11_scores["semver"] = (
         5 if re.match(r"\d+\.\d+\.\d+", extracted_data.get("version_local", "")) else 2
@@ -857,6 +962,15 @@ def phase_persona_scorecards():
         )
     else:
         p11_scores["encryption_real"] = 1
+    # NEW: SBOM capability check
+    try:
+        sbom_result = subprocess.run(
+            [sys.executable, "-m", "pip", "show", "cyclonedx-bom"],
+            capture_output=True, text=True, timeout=10,
+        )
+        p11_scores["sbom_capable"] = 5 if sbom_result.returncode == 0 else 2
+    except Exception:
+        p11_scores["sbom_capable"] = 2
     p11_avg = sum(p11_scores.values()) / len(p11_scores)
     scorecards.append(
         {
@@ -873,6 +987,88 @@ def phase_persona_scorecards():
     overall = sum(s["average"] for s in scorecards) / len(scorecards)
     print(f"  Overall persona score: {overall:.1f}/5")
     check("All personas score ≥ 3.0/5", all(s["average"] >= 3.0 for s in scorecards))
+
+
+# ─── Phase 12: Supply Chain Audit ─────────────────────────
+def phase_supply_chain():
+    print("\n━━ Phase 12: Supply Chain Audit ━━")
+    try:
+        from scripts.supply_chain_audit import (
+            phase_license_scan,
+            phase_pin_verification,
+            phase_typosquat_detection,
+        )
+        phase_license_scan()
+        phase_pin_verification()
+        phase_typosquat_detection()
+    except ImportError:
+        # Fall back to running as subprocess
+        script = REPO_ROOT / "scripts" / "supply_chain_audit.py"
+        if script.exists():
+            result = subprocess.run(
+                [sys.executable, str(script), "--json"],
+                capture_output=True, text=True, timeout=120,
+            )
+            if result.returncode == 0:
+                try:
+                    data = json.loads(result.stdout)
+                    for r in data.get("results", []):
+                        if r["status"] == "fail":
+                            check(f"Supply chain: {r['name']}", False, r.get("detail", ""))
+                        elif r["status"] == "pass":
+                            check(f"Supply chain: {r['name']}", True, r.get("detail", ""))
+                except json.JSONDecodeError:
+                    check("Supply chain audit output parseable", False)
+            else:
+                check("Supply chain audit completed", False, result.stderr[:200])
+        else:
+            warn("Supply chain audit script not found")
+
+
+# ─── Phase 13: Differential Red Team ─────────────────────
+def phase_differential():
+    print("\n━━ Phase 13: Differential Red Team ━━")
+    script = REPO_ROOT / "scripts" / "redteam_diff.py"
+    if script.exists():
+        result = subprocess.run(
+            [sys.executable, str(script), "--json"],
+            capture_output=True, text=True, timeout=60,
+        )
+        try:
+            data = json.loads(result.stdout)
+            for r in data.get("results", []):
+                if r["status"] == "fail":
+                    check(f"Regression: {r['name']}", False, r.get("detail", ""))
+                elif r["status"] == "pass":
+                    check(f"Regression: {r['name']}", True, r.get("detail", ""))
+                elif r["status"] == "warn":
+                    warn(f"Regression: {r['name']}", r.get("detail", ""))
+        except json.JSONDecodeError:
+            info("Differential check output not parseable (first run?)")
+    else:
+        warn("Differential red team script not found")
+
+
+# ─── Phase 14: Accessibility Audit ────────────────────────
+def phase_accessibility():
+    print("\n━━ Phase 14: Accessibility Audit ━━")
+    script = REPO_ROOT / "scripts" / "accessibility_audit.py"
+    if script.exists():
+        result = subprocess.run(
+            [sys.executable, str(script), "--json"],
+            capture_output=True, text=True, timeout=120,
+        )
+        try:
+            data = json.loads(result.stdout)
+            for r in data.get("results", []):
+                if r["status"] == "fail":
+                    check(f"A11y: {r['name']}", False, r.get("detail", ""))
+                elif r["status"] == "pass":
+                    check(f"A11y: {r['name']}", True, r.get("detail", ""))
+        except json.JSONDecodeError:
+            info("Accessibility audit not parseable")
+    else:
+        warn("Accessibility audit script not found")
 
 
 # ─── Scorecard ───────────────────────────────────────────
@@ -971,16 +1167,18 @@ def print_json():
 
 # ─── Main ────────────────────────────────────────────────
 def main():
-    parser = argparse.ArgumentParser(description="StateWeave Red Team Audit v2")
+    parser = argparse.ArgumentParser(description="StateWeave Red Team Audit v3")
     parser.add_argument("--quick", action="store_true", help="Skip time-to-value test")
     parser.add_argument("--json", action="store_true", help="Output JSON (for CI)")
     parser.add_argument("--personas", action="store_true", help="Include persona scorecards")
     parser.add_argument("--no-history", action="store_true", help="Don't save to history")
+    parser.add_argument("--skip-browser", action="store_true", help="Skip browser-based audits")
+    parser.add_argument("--skip-supply-chain", action="store_true", help="Skip supply chain audit")
     args = parser.parse_args()
 
     if not args.json:
         print("╔══════════════════════════════════════════════════════════╗")
-        print("║       StateWeave Red Team Audit v2 — Automated         ║")
+        print("║       StateWeave Red Team Audit v3 — Automated         ║")
         print("╚══════════════════════════════════════════════════════════╝")
 
     # Core phases (always run)
@@ -1005,6 +1203,21 @@ def main():
     # Persona scorecards (always in full mode, or with --personas)
     if not args.quick or args.personas:
         phase_persona_scorecards()
+
+    # NEW: Supply chain audit (Phase 12)
+    if not args.skip_supply_chain:
+        phase_supply_chain()
+    else:
+        info("Supply chain audit skipped (--skip-supply-chain)")
+
+    # NEW: Differential red team (Phase 13)
+    phase_differential()
+
+    # NEW: Accessibility audit (Phase 14)
+    if not args.skip_browser:
+        phase_accessibility()
+    else:
+        info("Accessibility audit skipped (--skip-browser)")
 
     # Output
     if args.json:

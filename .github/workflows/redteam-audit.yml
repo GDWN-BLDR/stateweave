@@ -6,10 +6,17 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      full_audit:
+        description: 'Run full audit (with TTV, personas, browser)'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
-  redteam:
-    name: Red Team Surface Audit
+  # ── Quick Red Team (every push/PR) ──────────────────────
+  redteam-quick:
+    name: Red Team Quick Scan
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -19,9 +26,73 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Run red team audit (quick mode)
-        run: python3 scripts/redteam_audit.py --quick --no-history
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
 
-      - name: Run full audit with TTV (manual trigger only)
-        if: github.event_name == 'workflow_dispatch'
-        run: python3 scripts/redteam_audit.py --personas --no-history
+      - name: Run red team audit (quick mode)
+        run: python3 scripts/redteam_audit.py --quick --skip-browser --skip-supply-chain --no-history
+
+      - name: Run adversarial tests (P0)
+        run: python -m pytest tests/redteam/ -v --tb=short -x --timeout=120
+
+      - name: Run supply chain audit
+        continue-on-error: true
+        run: |
+          pip install pip-audit 2>/dev/null || true
+          python3 scripts/supply_chain_audit.py --json
+
+      - name: Run differential regression check
+        continue-on-error: true
+        run: python3 scripts/redteam_diff.py --json
+
+  # ── Full Red Team (manual or release) ───────────────────
+  redteam-full:
+    name: Red Team Full Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      startsWith(github.ref, 'refs/heads/release/')
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install pip-audit 2>/dev/null || true
+
+      - name: Run full red team audit
+        run: python3 scripts/redteam_audit.py --personas --skip-browser --json --no-history > redteam-audit.json
+
+      - name: Run adversarial tests (P0/P3a)
+        run: python -m pytest tests/redteam/ -v --tb=short --timeout=180
+
+      - name: Run supply chain audit
+        run: python3 scripts/supply_chain_audit.py --json > supply-chain.json
+
+      - name: Run differential regression check
+        run: python3 scripts/redteam_diff.py --json > redteam-diff.json
+
+      - name: Upload audit artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: redteam-audit-results
+          path: |
+            redteam-audit.json
+            supply-chain.json
+            redteam-diff.json
+
+      - name: Check for failures
+        run: |
+          if grep -q '"status": "fail"' redteam-audit.json; then
+            echo "::error::Red team audit found failures — see artifact for details"
+            exit 1
+          fi

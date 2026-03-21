@@ -41,13 +41,26 @@ class StateWeaveHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    # Sentinel value for malformed JSON (body was present but unparseable)
+    _BAD_JSON = object()
+
     def _read_body(self) -> Optional[dict]:
         """Read and parse JSON request body."""
         length = int(self.headers.get("Content-Length", 0))
         if length == 0:
             return None
         raw = self.rfile.read(length)
-        return json.loads(raw)
+        try:
+            return json.loads(raw)
+        except (json.JSONDecodeError, UnicodeDecodeError) as e:
+            self.send_response(400)
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Content-Type", "application/json")
+            error_body = json.dumps({"error": f"Invalid JSON: {e}"}).encode()
+            self.send_header("Content-Length", str(len(error_body)))
+            self.end_headers()
+            self.wfile.write(error_body)
+            return self._BAD_JSON
 
     def do_OPTIONS(self):
         """Handle CORS preflight."""
@@ -90,6 +103,8 @@ class StateWeaveHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         """Handle POST requests."""
         body = self._read_body()
+        if body is self._BAD_JSON:
+            return  # 400 already sent by _read_body
         if body is None:
             self._send_json(400, {"error": "Request body required"})
             return
