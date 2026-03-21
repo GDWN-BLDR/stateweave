@@ -341,19 +341,51 @@ def get_instrumentor() -> Optional[AutoInstrumentor]:
 
 
 def _cleanup() -> None:
-    """Cleanup handler registered with atexit."""
+    """Cleanup handler registered with atexit — prints rich session summary card."""
     global _instrumentor
     if _instrumentor and _instrumentor.config.verbose:
+        import time
+
         summary = _instrumentor.summary()
         agents = summary["agents"]
         if agents:
-            print("\n  🧶 [stateweave] Session summary:")
+            total_steps = sum(a["steps"] for a in agents.values())
+            total_cps = sum(a["checkpoints"] for a in agents.values())
+            total_alerts = summary["total_alerts"]
+
+            print()
+            print("  ┌──────────────────────────────────────────────┐")
+            print("  │  🧶 StateWeave Session Summary               │")
+            print("  ├──────────────────────────────────────────────┤")
+
             for aid, stats in agents.items():
-                print(
-                    f"     {aid}: {stats['steps']} steps,"
-                    f" {stats['checkpoints']} checkpoints,"
-                    f" {stats['avg_overhead_ms']:.1f}ms avg"
-                )
-            if summary["total_alerts"]:
-                print(f"     ⚠ {summary['total_alerts']} alert(s) generated")
+                print(f"  │  Agent: {aid:<37s}│")
+                print(f"  │    Steps: {stats['steps']:<10d} Checkpoints: {stats['checkpoints']:<8d}│")
+
+                # Show confidence trend if available
+                if aid in _instrumentor._prev_confidence:
+                    conf = _instrumentor._prev_confidence[aid]
+                    conf_str = f"{conf:.0%}"
+                    # Try to find initial confidence
+                    initial_confs = [
+                        a for a in _instrumentor._alerts
+                        if a.agent_id == aid and "→" in a.message
+                    ]
+                    if initial_confs:
+                        conf_str = initial_confs[-1].message.split("(")[-1].rstrip(")")
+                    arrow = "▲" if conf >= 0.7 else "▼" if conf < 0.5 else "─"
+                    print(f"  │    Confidence: {conf_str:<10s} {arrow:<25s}│")
+
+                avg = stats["avg_overhead_ms"]
+                print(f"  │    Overhead: {avg:.1f}ms avg per checkpoint{' ' * max(0, 13 - len(f'{avg:.1f}'))}│")
+
+            print("  ├──────────────────────────────────────────────┤")
+            if total_alerts > 0:
+                print(f"  │  ⚠️  {total_alerts} alert(s) — run: stateweave why <agent>  │")
+            else:
+                print("  │  ✅ No alerts — agent ran clean               │")
+            print(f"  │  💡 Run: stateweave report                    │")
+            print("  └──────────────────────────────────────────────┘")
+            print()
     _instrumentor = None
+

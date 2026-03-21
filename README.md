@@ -570,6 +570,8 @@ stateweave ci my-agent             # CI regression detection (exits non-zero on 
 
 # ── Utilities ──
 stateweave try                     # interactive migration picker
+stateweave report                  # shareable markdown report for PRs/Slack
+stateweave hook install            # install git pre-commit hook (auto-runs ci)
 stateweave version                 # version, adapters, encryption status
 stateweave adapters                # list all 10 framework adapters
 stateweave scan                    # scan for installed frameworks

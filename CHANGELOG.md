@@ -3,7 +3,21 @@
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).## [0.3.14] — 2026-03-21
+
+### Added
+
+- **`stateweave report`** — Generate shareable markdown reports of agent state for PRs, Slack, or docs
+- **`stateweave hook install/uninstall/status`** — Git pre-commit hook that auto-runs `stateweave ci` on every commit
+- **Rich auto() session card** — `stateweave.auto(verbose=True)` now prints a box-drawing session summary at exit with confidence trends, alerts, and next-step hints
+
+### Changed
+
+- **README** — Expanded CLI reference to 37 commands
+- **llms.txt** — Added report and hook features
+
+---
+
 ## [0.3.13] — 2026-03-21
 
 ### Added

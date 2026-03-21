@@ -74,6 +74,8 @@ StateWeave ships as an MCP server. Add to your MCP config:
 - Interactive migration picker (`stateweave try` — choose frameworks interactively)
 - Agent dashboard (`stateweave stats` — aggregate checkpoint statistics)
 - Shell completions (`stateweave completions bash/zsh/fish`)
+- Shareable markdown reports (`stateweave report` — paste into PRs/Slack)
+- Git pre-commit hook (`stateweave hook install` — CI on every commit)
 - Live agent dashboard (`stateweave watch`)
 - CI regression detection (`stateweave ci` — exits non-zero on behavior regression)
 - AES-256-GCM encryption with Ed25519 payload signing
