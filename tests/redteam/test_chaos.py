@@ -35,10 +35,7 @@ serializer = StateWeaveSerializer()
 
 def make_payload(agent_id="chaos-test", num_messages=3):
     """Create a test payload."""
-    messages = [
-        Message(role="human", content=f"Message {i}")
-        for i in range(num_messages)
-    ]
+    messages = [Message(role="human", content=f"Message {i}") for i in range(num_messages)]
     return StateWeavePayload(
         source_framework="test",
         metadata=AgentMetadata(agent_id=agent_id),
@@ -52,6 +49,7 @@ def make_payload(agent_id="chaos-test", num_messages=3):
 # ═══════════════════════════════════════════════════════════════════
 # 1. MID-CHECKPOINT CORRUPTION
 # ═══════════════════════════════════════════════════════════════════
+
 
 class TestMidCheckpointCorruption:
     """Simulate failures during checkpoint write."""
@@ -111,6 +109,7 @@ class TestMidCheckpointCorruption:
 # 2. DISK FULL SIMULATION
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestDiskFull:
     """Simulate out-of-disk-space conditions."""
 
@@ -136,7 +135,7 @@ class TestDiskFull:
                     raise OSError("No space left on device")
                 return original_write(self_path, *args, **kwargs)
 
-            with patch.object(Path, 'write_text', mock_write_text):
+            with patch.object(Path, "write_text", mock_write_text):
                 try:
                     store.checkpoint(payload, agent_id=agent_id, label="should-fail")
                     # If it succeeds despite the mock, the mock didn't trigger — OK
@@ -175,6 +174,7 @@ class TestDiskFull:
 # 3. CONCURRENT WRITES
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestConcurrentWrites:
     """Test concurrent checkpoint writes from multiple threads."""
 
@@ -191,11 +191,7 @@ class TestConcurrentWrites:
                 try:
                     payload = make_payload(agent_id, num_messages=thread_id + 1)
                     payload.cognitive_state.working_memory["thread"] = thread_id
-                    store.checkpoint(
-                        payload,
-                        agent_id=agent_id,
-                        label=f"thread-{thread_id}"
-                    )
+                    store.checkpoint(payload, agent_id=agent_id, label=f"thread-{thread_id}")
                     with lock:
                         success_count[0] += 1
                 except Exception as e:
@@ -269,6 +265,7 @@ class TestConcurrentWrites:
 # 4. STATE FILE CORRUPTION
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestStateFileCorruption:
     """Feed corrupted state files to the serializer."""
 
@@ -278,6 +275,7 @@ class TestStateFileCorruption:
         raw = serializer.dumps(payload)
 
         import random
+
         rng = random.Random(42)  # Deterministic
 
         for _ in range(50):
@@ -311,6 +309,7 @@ class TestStateFileCorruption:
         raw = serializer.dumps(payload)
 
         import random
+
         rng = random.Random(123)
 
         for _ in range(20):
@@ -325,6 +324,7 @@ class TestStateFileCorruption:
 # ═══════════════════════════════════════════════════════════════════
 # 5. CLOCK SKEW
 # ═══════════════════════════════════════════════════════════════════
+
 
 class TestClockSkew:
     """Verify audit trail handles clock anomalies."""
@@ -369,6 +369,7 @@ class TestClockSkew:
 # 6. SERIALIZER EDGE CASES UNDER CHAOS
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestSerializerUnderChaos:
     """Serializer resilience under adversarial conditions."""
 
@@ -379,7 +380,7 @@ class TestSerializerUnderChaos:
 
         # Replace a random section with garbage
         mid = len(raw) // 2
-        corrupted = raw[:mid] + b"CORRUPTION" + raw[mid + 10:]
+        corrupted = raw[:mid] + b"CORRUPTION" + raw[mid + 10 :]
 
         try:
             serializer.loads(corrupted)
@@ -401,9 +402,7 @@ class TestSerializerUnderChaos:
     def test_extremely_large_working_memory(self):
         """Payload with 10K working memory keys must serialize/deserialize."""
         payload = make_payload("large-wm")
-        payload.cognitive_state.working_memory = {
-            f"key_{i}": f"value_{i}" for i in range(10_000)
-        }
+        payload.cognitive_state.working_memory = {f"key_{i}": f"value_{i}" for i in range(10_000)}
         raw = serializer.dumps(payload)
         restored = serializer.loads(raw)
         assert len(restored.cognitive_state.working_memory) == 10_000

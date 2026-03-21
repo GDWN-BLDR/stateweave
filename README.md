@@ -119,7 +119,21 @@ $ stateweave migrate --from langgraph --to crewai --agent my-agent
 
 ```python
 import stateweave
-stateweave.auto()  # That's it. Auto-checkpoint + confidence alerts + session summary.
+stateweave.auto(verbose=True)  # Auto-checkpoint + confidence alerts + session summary card.
+```
+
+After every agent run, StateWeave prints a rich session summary:
+
+```
+  ┌──────────────────────────────────────────────┐
+  │  🧶 StateWeave Session Summary               │
+  ├──────────────────────────────────────────────┤
+  │  Agent: my-agent                              │
+  │    Steps: 12         Checkpoints: 3           │
+  │    Confidence: 87%   ▲                        │
+  │  ✅ No alerts — agent ran clean               │
+  │  💡 Run: stateweave report                    │
+  └──────────────────────────────────────────────┘
 ```
 
 ### git-Style CLI
@@ -342,7 +356,7 @@ Every agent's state is represented as a `StateWeavePayload`:
 
 ```python
 StateWeavePayload(
-    stateweave_version="0.3.11",
+    stateweave_version="0.3.15",
     source_framework="langgraph",
     exported_at=datetime,
     cognitive_state=CognitiveState(
@@ -592,7 +606,7 @@ stateweave compare my-agent 1 3    # visual diff between two checkpoint versions
 
 ## Compliance (UCE)
 
-StateWeave enforces its own architectural standards via the **Universal Compliance Engine** — 12 automated scanners that run on every commit:
+StateWeave enforces its own architectural standards via the **Universal Compliance Engine** — 12 automated scanners that catch architecture violations before they ship:
 
 | Scanner | What It Checks | Mode |
 |---------|---------------|------|

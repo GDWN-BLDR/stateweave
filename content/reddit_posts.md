@@ -39,8 +39,9 @@ and credential stripping so API keys never leave your infra.
 
 GitHub: https://github.com/GDWN-BLDR/stateweave
 
-Apache 2.0, 730+ tests. Still early — feedback welcome, especially
-from anyone who's needed to move agent state between frameworks.
+Apache 2.0, 730+ tests. Ships with `stateweave migrate --from langgraph
+--to crewai --agent my-agent` one-command migration and a session summary
+card after every run. Feedback welcome.
 
 ---
 
@@ -136,7 +137,7 @@ Things the Python crowd might care about:
 - Pydantic models throughout — strict validation, typed everything
 - No pickle or eval anywhere (compliance engine enforces this)
 - pyproject.toml-native, ruff-formatted
-- CLI with 25+ commands (export, import, diff, checkpoint, rollback, log, blame, replay, etc.)
+- CLI with 43 commands (migrate, benchmark, why, report, hook, clean, env, etc.)
 - 730+ tests, including integration tests against real LangGraph
 - AES-256-GCM encryption + Ed25519 signing
 - State versioning: checkpoint, rollback, diff, branch

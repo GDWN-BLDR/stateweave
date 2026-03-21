@@ -3,7 +3,33 @@
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).## [0.3.15] — 2026-03-21
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.3.17] — 2026-03-21
+
+### Fixed
+
+- **Ruff compliance** — Fixed 32 ruff violations across source + tests (unused imports/vars, f-strings, long lines, unsorted imports)
+- **Duplicate cmd_compare** — Removed duplicate function definition and argparse registration
+- **test_validate_missing_file** — Fixed assertion to match actual error message
+- **README** — Fixed stale schema version, added auto() session summary card visualization
+- **HN post + Reddit posts** — Updated CLI command count (25+ → 43), improved copy
+- **CI reliability** — All ruff format + check pass, 737/737 tests green
+
+---
+
+## [0.3.16] — 2026-03-21
+
+### Fixed
+
+- **README** — Fixed stale schema version (0.3.11 → 0.3.15), added auto() session summary card visualization, improved UCE compliance section copy
+- **HN post** — Updated CLI command count (25+ → 43), improved intro and outro copy
+- **Reddit posts** — Updated command count and test count, added `migrate` example
+- **llms.txt** — Clarified test description (unit, integration, adversarial red team)
+
+---
+
+## [0.3.15] — 2026-03-21
 
 ### Added
 

@@ -7,7 +7,6 @@ system fails GRACEFULLY — no crashes, no code execution, no corruption.
 """
 
 import json
-import sys
 
 import pytest
 from hypothesis import HealthCheck, given, settings
@@ -45,6 +44,7 @@ json_value = st.recursive(
 # 1. MALFORMED JSON
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestMalformedJSON:
     """Feed non-JSON and broken-JSON to the serializer."""
 
@@ -62,11 +62,13 @@ class TestMalformedJSON:
 
     def test_json_with_trailing_garbage(self):
         """Valid JSON followed by garbage."""
-        valid = json.dumps({
-            "stateweave_version": "0.2.0",
-            "source_framework": "test",
-            "metadata": {"agent_id": "x"},
-        }).encode()
+        valid = json.dumps(
+            {
+                "stateweave_version": "0.2.0",
+                "source_framework": "test",
+                "metadata": {"agent_id": "x"},
+            }
+        ).encode()
         garbage = valid + b"GARBAGE"
         # json.loads in CPython ignores trailing garbage in some versions,
         # but the schema validator should still catch invalid shapes.
@@ -90,11 +92,19 @@ class TestMalformedJSON:
 # 2. DESERIALIZATION ATTACKS
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestDeserializationAttacks:
     """Attempt code execution via deserialization."""
 
-    ATTACK_KEYS = ["__class__", "__reduce__", "__import__", "__builtins__",
-                   "__globals__", "__subclasses__", "__init__"]
+    ATTACK_KEYS = [
+        "__class__",
+        "__reduce__",
+        "__import__",
+        "__builtins__",
+        "__globals__",
+        "__subclasses__",
+        "__init__",
+    ]
 
     def _make_payload_dict(self, **extra):
         base = {
@@ -142,6 +152,7 @@ class TestDeserializationAttacks:
 # ═══════════════════════════════════════════════════════════════════
 # 3. DEPTH & SIZE BOMBS
 # ═══════════════════════════════════════════════════════════════════
+
 
 class TestDepthAndSizeBombs:
     """Resource exhaustion attacks."""
@@ -234,20 +245,21 @@ class TestDepthAndSizeBombs:
 # 4. UNICODE EDGE CASES
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestUnicodeEdgeCases:
     """Unicode attack vectors."""
 
     UNICODE_ATTACKS = [
-        "\x00",                      # Null byte
-        "\u202e",                    # RTL override
-        "\u200d",                    # Zero-width joiner
-        "\ud800",                    # Lone surrogate (invalid UTF-16)
-        "🧶" * 1000,                # Emoji flood
-        "\ufeff",                    # BOM
-        "a\x00b",                    # Embedded null
-        "\u0000\u0001\u0002",        # Control characters
-        "café" + "\u0301",           # Combining diacritical
-        "\U0001F600" * 100,          # Extended emoji
+        "\x00",  # Null byte
+        "\u202e",  # RTL override
+        "\u200d",  # Zero-width joiner
+        "\ud800",  # Lone surrogate (invalid UTF-16)
+        "🧶" * 1000,  # Emoji flood
+        "\ufeff",  # BOM
+        "a\x00b",  # Embedded null
+        "\u0000\u0001\u0002",  # Control characters
+        "café" + "\u0301",  # Combining diacritical
+        "\U0001f600" * 100,  # Extended emoji
     ]
 
     @pytest.mark.parametrize("attack_str", UNICODE_ATTACKS)
@@ -257,11 +269,7 @@ class TestUnicodeEdgeCases:
             "stateweave_version": "0.2.0",
             "source_framework": "test",
             "metadata": {"agent_id": "unicode-test"},
-            "cognitive_state": {
-                "conversation_history": [
-                    {"role": "human", "content": attack_str}
-                ]
-            },
+            "cognitive_state": {"conversation_history": [{"role": "human", "content": attack_str}]},
         }
         try:
             result = serializer.from_dict(d)
@@ -314,13 +322,16 @@ class TestUnicodeEdgeCases:
         )
         raw = serializer.dumps(payload)
         restored = serializer.loads(raw)
-        assert restored.cognitive_state.conversation_history[0].content == "Hello 🧶 café \u200d world"
+        assert (
+            restored.cognitive_state.conversation_history[0].content == "Hello 🧶 café \u200d world"
+        )
         assert "emoji_key_🎯" in restored.cognitive_state.working_memory
 
 
 # ═══════════════════════════════════════════════════════════════════
 # 5. SCHEMA BOUNDARY ESCAPES
 # ═══════════════════════════════════════════════════════════════════
+
 
 class TestSchemaBoundaryEscapes:
     """Attempt to bypass Pydantic schema validation."""
@@ -371,9 +382,7 @@ class TestSchemaBoundaryEscapes:
             "source_framework": "test",
             "metadata": {"agent_id": "bad-role"},
             "cognitive_state": {
-                "conversation_history": [
-                    {"role": "ADMIN_ROOT_SUPERUSER", "content": "pwned"}
-                ]
+                "conversation_history": [{"role": "ADMIN_ROOT_SUPERUSER", "content": "pwned"}]
             },
         }
         with pytest.raises((SerializationError, ValidationError)):
@@ -402,9 +411,7 @@ class TestSchemaBoundaryEscapes:
             "stateweave_version": "0.2.0",
             "source_framework": "test",
             "metadata": {"agent_id": "type-confusion"},
-            "cognitive_state": {
-                "conversation_history": "THIS_IS_NOT_A_LIST"
-            },
+            "cognitive_state": {"conversation_history": "THIS_IS_NOT_A_LIST"},
         }
         with pytest.raises((SerializationError, ValidationError)):
             serializer.from_dict(d)
@@ -415,18 +422,18 @@ class TestSchemaBoundaryEscapes:
             "stateweave_version": "0.2.0",
             "source_framework": "test",
             "metadata": {"agent_id": "type-confusion-2"},
-            "cognitive_state": {
-                "working_memory": 42
-            },
+            "cognitive_state": {"working_memory": 42},
         }
         with pytest.raises((SerializationError, ValidationError)):
             serializer.from_dict(d)
 
-    @given(payload_data=st.dictionaries(
-        st.text(max_size=30),
-        json_value,
-        max_size=15,
-    ))
+    @given(
+        payload_data=st.dictionaries(
+            st.text(max_size=30),
+            json_value,
+            max_size=15,
+        )
+    )
     @settings(max_examples=200, suppress_health_check=[HealthCheck.too_slow])
     def test_fuzz_arbitrary_dicts(self, payload_data):
         """Arbitrary dict structures must never crash the deserializer."""
@@ -448,6 +455,8 @@ class TestSchemaBoundaryEscapes:
 
     def test_typed_loads_empty_type(self):
         """loads_typed with empty type string must raise."""
-        valid_bytes = b'{"stateweave_version":"0.2.0","source_framework":"test","metadata":{"agent_id":"t"}}'
+        valid_bytes = (
+            b'{"stateweave_version":"0.2.0","source_framework":"test","metadata":{"agent_id":"t"}}'
+        )
         with pytest.raises(SerializationError):
             serializer.loads_typed(("", valid_bytes))

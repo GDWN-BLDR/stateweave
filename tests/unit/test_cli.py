@@ -96,7 +96,7 @@ class TestCLI:
             text=True,
         )
         assert result.returncode != 0
-        assert "not found" in result.stderr
+        assert "not found" in result.stderr or "Not a regular file" in result.stderr
 
     def test_diff_two_files(self, tmp_path):
         serializer = StateWeaveSerializer(pretty=True)

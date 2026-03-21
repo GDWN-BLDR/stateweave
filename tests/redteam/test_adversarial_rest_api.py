@@ -9,20 +9,14 @@ Uses raw http.client to bypass any framework safety nets.
 import http.client
 import json
 import os
-import signal
 import socket
 import subprocess
 import sys
-import threading
 import time
-from contextlib import contextmanager
-from http.server import HTTPServer
-
-import pytest
 
 # RemoteDisconnected is raised when the server crashes on bad input — this is
 # itself a finding (server should return 400, not drop the connection).
-from http.client import RemoteDisconnected
+import pytest
 
 
 def find_free_port():
@@ -102,6 +96,7 @@ def api_request(port, method, path, body=None, headers=None, timeout=10):
 # 1. MALFORMED REQUEST BODIES
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestMalformedBodies:
     """Send broken request bodies to POST endpoints."""
 
@@ -113,50 +108,40 @@ class TestMalformedBodies:
     def test_truncated_json(self, api_server):
         """Truncated JSON must return 400, not crash."""
         status, _, body = api_request(
-            api_server, "POST", "/import",
-            body=b'{"framework": "langgraph", "payload":'
+            api_server, "POST", "/import", body=b'{"framework": "langgraph", "payload":'
         )
         assert status == 400
         assert "Invalid JSON" in body or "error" in body.lower()
 
     def test_binary_garbage_body(self, api_server):
         """Random binary data as body must return 400, not crash."""
-        status, _, body = api_request(
-            api_server, "POST", "/import",
-            body=os.urandom(500)
-        )
+        status, _, body = api_request(api_server, "POST", "/import", body=os.urandom(500))
         assert status == 400
         assert "Invalid JSON" in body or "error" in body.lower()
 
     def test_json_with_trailing_comma(self, api_server):
         """JSON with trailing comma (invalid) must return 400."""
         status, _, body = api_request(
-            api_server, "POST", "/import",
-            body=b'{"framework": "langgraph",}'
+            api_server, "POST", "/import", body=b'{"framework": "langgraph",}'
         )
         assert status == 400
         assert "Invalid JSON" in body or "error" in body.lower()
 
     def test_null_body(self, api_server):
         """JSON null as body must return error."""
-        status, _, body = api_request(
-            api_server, "POST", "/import",
-            body=b"null"
-        )
+        status, _, body = api_request(api_server, "POST", "/import", body=b"null")
         assert status in (400, 500)
 
     def test_json_array_instead_of_object(self, api_server):
         """JSON array instead of object must be handled."""
-        status, _, body = api_request(
-            api_server, "POST", "/import",
-            body=b'[1, 2, 3]'
-        )
+        status, _, body = api_request(api_server, "POST", "/import", body=b"[1, 2, 3]")
         assert status in (400, 500)
 
 
 # ═══════════════════════════════════════════════════════════════════
 # 2. PATH TRAVERSAL IN URL
 # ═══════════════════════════════════════════════════════════════════
+
 
 class TestURLPathTraversal:
     """Attempt to access files via URL path traversal."""
@@ -180,16 +165,14 @@ class TestURLPathTraversal:
     @pytest.mark.parametrize("path", TRAVERSAL_PATHS)
     def test_path_traversal_post(self, api_server, path):
         """Path traversal via POST must not execute or leak."""
-        status, _, body = api_request(
-            api_server, "POST", path,
-            body=b'{"test": true}'
-        )
+        status, _, body = api_request(api_server, "POST", path, body=b'{"test": true}')
         assert "root:" not in body
 
 
 # ═══════════════════════════════════════════════════════════════════
 # 3. HTTP METHOD CONFUSION
 # ═══════════════════════════════════════════════════════════════════
+
 
 class TestHTTPMethodConfusion:
     """Send unexpected HTTP methods."""
@@ -201,8 +184,7 @@ class TestHTTPMethodConfusion:
         """Unexpected HTTP methods on /import must not execute side effects."""
         try:
             status, _, body = api_request(
-                api_server, method, "/import",
-                body=b'{"framework":"langgraph"}'
+                api_server, method, "/import", body=b'{"framework":"langgraph"}'
             )
             # Should return error or method not allowed
             assert status in (400, 404, 405, 501)
@@ -227,6 +209,7 @@ class TestHTTPMethodConfusion:
 # 4. CORS VALIDATION
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestCORSValidation:
     """Verify CORS headers are present and not leaking credentials."""
 
@@ -240,26 +223,30 @@ class TestCORSValidation:
     def test_options_preflight(self, api_server):
         """OPTIONS request must return CORS preflight headers."""
         status, headers, _ = api_request(
-            api_server, "OPTIONS", "/import",
-            headers={"Origin": "http://evil.com"}
+            api_server, "OPTIONS", "/import", headers={"Origin": "http://evil.com"}
         )
         assert status == 204
-        assert "Access-Control-Allow-Methods" in headers or "access-control-allow-methods" in headers
+        assert (
+            "Access-Control-Allow-Methods" in headers or "access-control-allow-methods" in headers
+        )
 
     def test_no_credentials_in_cors(self, api_server):
         """CORS must NOT include Access-Control-Allow-Credentials."""
         status, headers, _ = api_request(api_server, "GET", "/health")
         # Allowing credentials with wildcard origin is a security antipattern
-        cred_header = headers.get("Access-Control-Allow-Credentials",
-                                  headers.get("access-control-allow-credentials"))
+        cred_header = headers.get(
+            "Access-Control-Allow-Credentials", headers.get("access-control-allow-credentials")
+        )
         if cred_header:
-            assert cred_header.lower() != "true", \
+            assert cred_header.lower() != "true", (
                 "Credentials allowed with wildcard origin is dangerous"
+            )
 
 
 # ═══════════════════════════════════════════════════════════════════
 # 5. CONTENT-TYPE CONFUSION
 # ═══════════════════════════════════════════════════════════════════
+
 
 class TestContentTypeConfusion:
     """Send wrong Content-Type headers."""
@@ -267,9 +254,11 @@ class TestContentTypeConfusion:
     def test_xml_content_type(self, api_server):
         """XML Content-Type with JSON body must still parse or reject cleanly."""
         status, _, body = api_request(
-            api_server, "POST", "/import",
+            api_server,
+            "POST",
+            "/import",
             body=b'{"framework":"langgraph","payload":{}}',
-            headers={"Content-Type": "text/xml"}
+            headers={"Content-Type": "text/xml"},
         )
         # Should either work (ignoring Content-Type) or fail cleanly
         assert status in (200, 400, 415, 500)
@@ -277,9 +266,11 @@ class TestContentTypeConfusion:
     def test_multipart_content_type(self, api_server):
         """multipart/form-data Content-Type must not crash."""
         status, _, body = api_request(
-            api_server, "POST", "/import",
+            api_server,
+            "POST",
+            "/import",
             body=b'{"framework":"langgraph"}',
-            headers={"Content-Type": "multipart/form-data; boundary=----"}
+            headers={"Content-Type": "multipart/form-data; boundary=----"},
         )
         assert status in (200, 400, 415, 500)
 
@@ -296,17 +287,17 @@ class TestContentTypeConfusion:
 # 6. RESPONSE VALIDATION
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestResponseValidation:
     """Verify responses don't leak internal details."""
 
     def test_error_response_no_stack_trace(self, api_server):
         """Error responses must NOT contain Python tracebacks."""
         status, _, body = api_request(
-            api_server, "POST", "/import",
-            body=b'{"framework":"nonexistent"}'
+            api_server, "POST", "/import", body=b'{"framework":"nonexistent"}'
         )
         assert "Traceback" not in body
-        assert "File \"" not in body
+        assert 'File "' not in body
         assert "line " not in body or "error" in body.lower()
 
     def test_404_no_internal_paths(self, api_server):
@@ -336,14 +327,17 @@ class TestResponseValidation:
 # 7. UNKNOWN FRAMEWORK IN API
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestUnknownFramework:
     """Verify API handles unknown framework names gracefully."""
 
     def test_export_unknown_framework(self, api_server):
         """Export with unknown framework must return 400."""
         status, _, body = api_request(
-            api_server, "POST", "/export",
-            body={"framework": "nonexistent_framework", "agent_id": "test"}
+            api_server,
+            "POST",
+            "/export",
+            body={"framework": "nonexistent_framework", "agent_id": "test"},
         )
         assert status == 400
         data = json.loads(body)
@@ -352,15 +346,11 @@ class TestUnknownFramework:
     def test_import_unknown_framework(self, api_server):
         """Import with unknown framework must return 400."""
         status, _, body = api_request(
-            api_server, "POST", "/import",
-            body={"framework": "evil_framework", "payload": {}}
+            api_server, "POST", "/import", body={"framework": "evil_framework", "payload": {}}
         )
         assert status == 400
 
     def test_export_missing_framework(self, api_server):
         """Export without framework field must return 400."""
-        status, _, body = api_request(
-            api_server, "POST", "/export",
-            body={"agent_id": "test"}
-        )
+        status, _, body = api_request(api_server, "POST", "/export", body={"agent_id": "test"})
         assert status == 400

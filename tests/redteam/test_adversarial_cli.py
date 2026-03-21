@@ -23,8 +23,7 @@ CLI_MODULE = [sys.executable, "-m", "stateweave.cli"]
 def run_cli(*args, stdin_data=None, timeout=30):
     """Run the stateweave CLI and capture output. Returns (returncode, stdout, stderr)."""
     result = subprocess.run(
-        [sys.executable, "-c", "from stateweave.cli import main; main()",
-         *args],
+        [sys.executable, "-c", "from stateweave.cli import main; main()", *args],
         capture_output=True,
         text=True,
         timeout=timeout,
@@ -61,6 +60,7 @@ except SystemExit as e:
 # 1. SHELL METACHARACTER INJECTION
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestShellMetacharacterInjection:
     """Verify shell metacharacters in arguments don't execute."""
 
@@ -80,9 +80,7 @@ class TestShellMetacharacterInjection:
     @pytest.mark.parametrize("attack", SHELL_ATTACKS)
     def test_shell_injection_in_agent_id(self, attack):
         """Shell metacharacters in --agent-id must not execute."""
-        rc, stdout, stderr = run_cli_via_argparse(
-            "export", "-f", "langgraph", "-a", attack
-        )
+        rc, stdout, stderr = run_cli_via_argparse("export", "-f", "langgraph", "-a", attack)
         # Should fail with a framework error, NOT execute the shell command
         # The key invariant: no sensitive file content was leaked
         assert "root:" not in stdout  # No /etc/passwd content
@@ -103,6 +101,7 @@ class TestShellMetacharacterInjection:
 # 2. PATH TRAVERSAL
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestPathTraversal:
     """Verify file operations don't escape intended directories."""
 
@@ -119,9 +118,7 @@ class TestPathTraversal:
     @pytest.mark.parametrize("path", TRAVERSAL_PATHS)
     def test_traversal_in_import_payload(self, path):
         """Path traversal in --payload argument must fail cleanly."""
-        rc, stdout, stderr = run_cli_via_argparse(
-            "import", "-f", "langgraph", "--payload", path
-        )
+        rc, stdout, stderr = run_cli_via_argparse("import", "-f", "langgraph", "--payload", path)
         # Must exit non-zero — either file not found or permission error
         assert rc != 0 or "Error" in stderr or "error" in stderr.lower()
         # Must not leak file contents
@@ -132,11 +129,14 @@ class TestPathTraversal:
     def test_traversal_in_diff(self, path):
         """Path traversal in diff arguments must fail cleanly."""
         with tempfile.NamedTemporaryFile(suffix=".json", mode="w", delete=False) as f:
-            json.dump({
-                "stateweave_version": "0.2.0",
-                "source_framework": "test",
-                "metadata": {"agent_id": "safe"},
-            }, f)
+            json.dump(
+                {
+                    "stateweave_version": "0.2.0",
+                    "source_framework": "test",
+                    "metadata": {"agent_id": "safe"},
+                },
+                f,
+            )
             safe_path = f.name
 
         try:
@@ -156,6 +156,7 @@ class TestPathTraversal:
 # ═══════════════════════════════════════════════════════════════════
 # 3. MALFORMED FILE INPUTS
 # ═══════════════════════════════════════════════════════════════════
+
 
 class TestMalformedFileInputs:
     """Feed broken files to CLI commands that read files."""
@@ -192,7 +193,7 @@ class TestMalformedFileInputs:
             "metadata": {"agent_id": "huge-test"},
             "cognitive_state": {
                 "conversation_history": [],
-                "working_memory": {f"key_{i}": f"value_{i}" for i in range(5000)}
+                "working_memory": {f"key_{i}": f"value_{i}" for i in range(5000)},
             },
         }
         with tempfile.NamedTemporaryFile(suffix=".json", mode="w", delete=False) as f:
@@ -232,6 +233,7 @@ class TestMalformedFileInputs:
 # 4. ARGUMENT EDGE CASES
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestArgumentEdgeCases:
     """Edge cases in argument parsing."""
 
@@ -241,20 +243,20 @@ class TestArgumentEdgeCases:
             "export", "-f", "nonexistent_framework_xyz", "-a", "test"
         )
         assert rc != 0
-        assert "unknown" in stderr.lower() or "error" in stderr.lower() or "available" in stderr.lower()
+        assert (
+            "unknown" in stderr.lower()
+            or "error" in stderr.lower()
+            or "available" in stderr.lower()
+        )
 
     def test_very_long_framework_name(self):
         """1000-char framework name must not crash."""
-        rc, stdout, stderr = run_cli_via_argparse(
-            "export", "-f", "x" * 1000, "-a", "test"
-        )
+        rc, stdout, stderr = run_cli_via_argparse("export", "-f", "x" * 1000, "-a", "test")
         assert rc != 0
 
     def test_empty_agent_id(self):
         """Empty agent_id must be handled."""
-        rc, stdout, stderr = run_cli_via_argparse(
-            "export", "-f", "langgraph", "-a", ""
-        )
+        rc, stdout, stderr = run_cli_via_argparse("export", "-f", "langgraph", "-a", "")
         # Can succeed or fail — must not crash
 
     def test_unicode_agent_id(self):
@@ -274,12 +276,15 @@ class TestArgumentEdgeCases:
         """--help output should be concise (≤50 lines at top level)."""
         rc, stdout, stderr = run_cli_via_argparse("--help")
         lines = stdout.strip().split("\n")
-        assert len(lines) <= 100, f"Help output is {len(lines)} lines — too intimidating for a first-time user"
+        assert len(lines) <= 100, (
+            f"Help output is {len(lines)} lines — too intimidating for a first-time user"
+        )
 
 
 # ═══════════════════════════════════════════════════════════════════
 # 5. SYMLINK ATTACKS
 # ═══════════════════════════════════════════════════════════════════
+
 
 class TestSymlinkAttacks:
     """Verify symlinks don't allow reading outside intended scope."""
@@ -293,9 +298,7 @@ class TestSymlinkAttacks:
                 pytest.skip("No /etc/passwd on this OS")
             os.symlink(target, link_path)
 
-            rc, stdout, stderr = run_cli_via_argparse(
-                "validate", link_path
-            )
+            rc, stdout, stderr = run_cli_via_argparse("validate", link_path)
             # Must fail (not valid JSON) but not leak passwd contents via success path
             assert rc != 0
 

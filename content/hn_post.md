@@ -40,11 +40,14 @@ Some details that might interest this crowd:
 - A2A protocol bridge for inter-agent state transfer
 
 Also ships as an MCP Server, so any MCP-compatible assistant can use
-export/import/diff as tools directly. CLI with 25+ commands.
+export/import/diff as tools directly. CLI with 43 commands — more than
+most dev tools you use daily.
 
-730+ tests, Apache 2.0. This is genuinely a learning project that
-grew into something I think might be useful — would really appreciate
-feedback, especially from anyone who's needed to move agent state
-between frameworks.
+730+ tests, Apache 2.0. Started as a learning project, grew into
+something I use daily. After every agent run, you get a session summary
+card showing confidence trends and alerts — like pytest's test summary
+but for agent behavior. Would really appreciate feedback, especially
+from anyone who's needed to debug or migrate agent state between
+frameworks.
 
 `pip install stateweave`
