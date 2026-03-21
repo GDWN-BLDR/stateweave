@@ -36,6 +36,7 @@ def sample_ciphertext(facade):
 # 1. KEY MATERIAL VALIDATION
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestKeyMaterialValidation:
     """Verify every invalid key is rejected cleanly."""
 
@@ -78,6 +79,7 @@ class TestKeyMaterialValidation:
 # 2. NONCE SAFETY
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestNonceSafety:
     """Verify nonce uniqueness and rejection of bad nonces."""
 
@@ -106,6 +108,7 @@ class TestNonceSafety:
 # ═══════════════════════════════════════════════════════════════════
 # 3. CIPHERTEXT INTEGRITY
 # ═══════════════════════════════════════════════════════════════════
+
 
 class TestCiphertextIntegrity:
     """GCM authentication must catch every single-bit corruption."""
@@ -157,6 +160,7 @@ class TestCiphertextIntegrity:
 # ═══════════════════════════════════════════════════════════════════
 # 4. PBKDF2 / PASSPHRASE EDGE CASES
 # ═══════════════════════════════════════════════════════════════════
+
 
 class TestPassphraseEdgeCases:
     """Edge cases in passphrase-based key derivation."""
@@ -210,6 +214,7 @@ class TestPassphraseEdgeCases:
 # 5. ED25519 SIGNATURE ATTACKS
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestEd25519Attacks:
     """Attack the Ed25519 signing/verification path."""
 
@@ -224,6 +229,7 @@ class TestEd25519Attacks:
         sig = EncryptionFacade.sign(data, priv)
         # Corrupt by truncation
         import base64
+
         raw_sig = base64.b64decode(sig)
         truncated = base64.b64encode(raw_sig[:32]).decode()
         assert EncryptionFacade.verify(data, truncated, pub) is False
@@ -266,6 +272,7 @@ class TestEd25519Attacks:
         """Random bytes as signature must fail cleanly."""
         _, pub = keypair
         import base64
+
         garbage_sig = base64.b64encode(os.urandom(64)).decode()
         assert EncryptionFacade.verify(b"data", garbage_sig, pub) is False
 
@@ -279,6 +286,7 @@ class TestEd25519Attacks:
 # ═══════════════════════════════════════════════════════════════════
 # 6. ASSOCIATED DATA (AAD) ATTACKS
 # ═══════════════════════════════════════════════════════════════════
+
 
 class TestAssociatedDataAttacks:
     """AEAD associated data must be strictly bound."""

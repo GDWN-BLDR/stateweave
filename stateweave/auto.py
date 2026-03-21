@@ -344,13 +344,9 @@ def _cleanup() -> None:
     """Cleanup handler registered with atexit — prints rich session summary card."""
     global _instrumentor
     if _instrumentor and _instrumentor.config.verbose:
-        import time
-
         summary = _instrumentor.summary()
         agents = summary["agents"]
         if agents:
-            total_steps = sum(a["steps"] for a in agents.values())
-            total_cps = sum(a["checkpoints"] for a in agents.values())
             total_alerts = summary["total_alerts"]
 
             print()
@@ -360,7 +356,9 @@ def _cleanup() -> None:
 
             for aid, stats in agents.items():
                 print(f"  │  Agent: {aid:<37s}│")
-                print(f"  │    Steps: {stats['steps']:<10d} Checkpoints: {stats['checkpoints']:<8d}│")
+                steps = stats["steps"]
+                cps = stats["checkpoints"]
+                print(f"  │    Steps: {steps:<10d} Checkpoints: {cps:<8d}│")
 
                 # Show confidence trend if available
                 if aid in _instrumentor._prev_confidence:
@@ -368,8 +366,7 @@ def _cleanup() -> None:
                     conf_str = f"{conf:.0%}"
                     # Try to find initial confidence
                     initial_confs = [
-                        a for a in _instrumentor._alerts
-                        if a.agent_id == aid and "→" in a.message
+                        a for a in _instrumentor._alerts if a.agent_id == aid and "→" in a.message
                     ]
                     if initial_confs:
                         conf_str = initial_confs[-1].message.split("(")[-1].rstrip(")")
@@ -377,15 +374,15 @@ def _cleanup() -> None:
                     print(f"  │    Confidence: {conf_str:<10s} {arrow:<25s}│")
 
                 avg = stats["avg_overhead_ms"]
-                print(f"  │    Overhead: {avg:.1f}ms avg per checkpoint{' ' * max(0, 13 - len(f'{avg:.1f}'))}│")
+                pad = " " * max(0, 13 - len(f"{avg:.1f}"))
+                print(f"  │    Overhead: {avg:.1f}ms avg per checkpoint{pad}│")
 
             print("  ├──────────────────────────────────────────────┤")
             if total_alerts > 0:
                 print(f"  │  ⚠️  {total_alerts} alert(s) — run: stateweave why <agent>  │")
             else:
                 print("  │  ✅ No alerts — agent ran clean               │")
-            print(f"  │  💡 Run: stateweave report                    │")
+            print("  │  💡 Run: stateweave report                    │")
             print("  └──────────────────────────────────────────────┘")
             print()
     _instrumentor = None
-

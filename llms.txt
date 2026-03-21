@@ -92,7 +92,7 @@ StateWeave ships as an MCP server. Add to your MCP config:
 - A2A protocol bridge
 - 12 UCE compliance scanners (serialization safety, import discipline, etc.)
 - GitHub Action template for CI integration
-- 730+ tests
+- 730+ tests (unit, integration, adversarial red team)
 
 ## Links
 - Source: https://github.com/GDWN-BLDR/stateweave
