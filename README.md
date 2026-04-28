@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/gdwn-bldr-stateweave-badge.png)](https://mseep.ai/app/gdwn-bldr-stateweave)
+
 <p align="center">
   <h1 align="center">🧶 StateWeave</h1>
   <p align="center"><strong><code>git</code> for agent brains.</strong></p>
